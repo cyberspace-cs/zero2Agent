@@ -15,47 +15,9 @@ Agent Demo 能完成一次工具调用，不代表它能承受 Worker 重启、�
 
 ---
 
-## Q：如何支撑几十万并发 Agent Task，并把它观测清楚？
-
-> 来源：高并发调度与 Agent Observability 高频题 / [顺极 Agent 开发二面](https://www.nowcoder.com/feed/main/detail/93a26b84a6634558b7228bf350c709b5) / [中国电信风控 Agent 二面](https://www.nowcoder.com/feed/main/detail/22e18a3d20734429aec41b37744beadc) / [互联网金融 Agent 开发三面](https://www.nowcoder.com/feed/main/detail/88c55ee65af04ac98c218b9d17c47a71) / [百度 Agent 一面](https://www.nowcoder.com/feed/main/detail/53542e2dcfd44b1d84b0ae55b4fc1b35)【阿里 Agent Infra 一面题库同题：MQ、背压、多租户、Scheduler 与 Worker 拆分】
-
-**新手答**：“用 MQ 解耦，再水平扩容 Worker，接入日志、指标和链路追踪。”
-
-**高手答**：
-
-我会先澄清“几十万并发”是活跃会话、等待任务还是同时计算，并给出到达率、平均步骤数、各阶段耗时和 SLO。大量 Run 可能在等待 LLM、Tool 或人工事件，不能都占用 Worker。
-
-控制面按租户、优先级和资源类型分队列；用 visibility timeout/lease、ack、DLQ 和毒任务隔离保证消费；用 weighted fair scheduling、并发配额和 admission control 防止大租户挤占资源；对 LLM、GPU 和外部 Tool 分别实施背压，而不是只按 CPU 扩容。
-
-全量开放前还要把模型分层和成本预算放进准入：简单步骤走低成本模型，复杂或高风险步骤才升级；Run、租户和平台分别设置 Token、金额、并发和 Deadline 上限。容量规划用到达率、各资源阶段服务时间和长尾分布估算，不能把“sub-agent 最多开几个”写成固定常数。容器 CPU/内存水位、GPU/KV 容量、模型配额和外部 Tool 限流必须分别观测，哪个先饱和就在哪一层背压。
-
-Sandbox 容量要单独建模：区分冷启动、预热池、活跃执行和回收中实例，按租户与风险等级设并发配额。扩容信号不只看队列长度，还要看队列等待时间、启动耗时、CPU/内存/磁盘水位和回收失败率。预热复用必须先验证文件、进程、缓存和凭证已清理，否则优先牺牲冷启动时延而保持一次性隔离。
-
-一个 Run 是根 Trace，模型、检索、工具、Sandbox 和状态提交是 Span。核心指标包括任务语义成功率、基础设施失败率、队列等待、端到端延迟、步骤数、Token/Cost 和 `UNKNOWN` 副作用数。Prompt、Tool 参数和结果可能包含隐私，必须脱敏、采样、分级存储和审计，不能直接放进高基数 Metrics Label。
-
-**差距在哪**：新手会画 Queue + Worker，高手先定义负载模型，并同时处理公平性、下游瓶颈和可观测数据治理。
-
----
-
-## Q：Kubernetes Pod/Deployment 从提交到就绪经历哪些控制链路？
-
-> 来源：[百度 AI Infra 校招面经](https://www.nowcoder.com/feed/main/detail/436228d68ccb4ec78d08644bc9227dec) / [虾皮 AI Infra 实习一面](https://www.nowcoder.com/feed/main/detail/e610f57cfd3548cd96a27d92e2f8b25e) / [虾皮 AI Infra 实习二面](https://www.nowcoder.com/feed/main/detail/62b9123e4b7f497285e7d6f68844cdd6) / [字节社招一面](https://www.nowcoder.com/feed/main/detail/a385d6cc457d47c99c03cb8ea752ab89)【阿里 Agent Infra 一面题库追问：Kubernetes Scheduler 基本调度流程】
-
-**新手答**：“请求交给 API Server，Scheduler 选节点，Kubelet 拉起容器。”
-
-**高手答**：
-
-客户端请求先经过 API Server 的鉴权、准入和校验，再持久化到 etcd。Deployment Controller 通过 watch/Informer 观察期望状态并创建 ReplicaSet，ReplicaSet 再创建 Pod。Scheduler 为未绑定 Pod 做过滤、评分并写入节点绑定；目标节点上的 Kubelet 调用 CRI 拉镜像和启动容器，按声明协调 CSI 存储与 CNI 网络。探针通过后 Pod 才 Ready，Service 对应的 EndpointSlice 随之更新。
-
-这是一组异步、最终一致的 Reconcile，不是一条同步 RPC。CSI、CNI 的具体调用位置还受运行时、插件和 Kubernetes 版本影响，回答时应说明组件责任，不硬背一条固定时序。
-
-**差距在哪**：新手背组件顺序，高手能讲清对象所有权、watch/reconcile、调度绑定与数据面就绪的边界。
-
----
-
 ## Q：为什么需要 Checkpoint，恢复时从哪里继续？
 
-> 来源：长任务恢复与状态管理高频题 / [字节数据平台 Agent 一面](https://www.nowcoder.com/feed/main/detail/f5f840632a19417b91b8987762427a6a) / [MINISO Agent 开发实习一面](https://www.nowcoder.com/feed/main/detail/f844a4ac20be44bc9b3f756bd0ebb84c) / [哔哩哔哩秋招一面](https://www.nowcoder.com/feed/main/detail/87eadf9db3b14bb6912064ee79267c30)【阿里 Agent Infra 一面题库同题：状态管理、Checkpoint 与保存时机】
+> 来源：长任务恢复与状态管理高频题 / [字节数据平台 Agent 一面](https://www.nowcoder.com/feed/main/detail/f5f840632a19417b91b8987762427a6a) / [MINISO Agent 开发实习一面](https://www.nowcoder.com/feed/main/detail/f844a4ac20be44bc9b3f756bd0ebb84c) / [哔哩哔哩秋招一面](https://www.nowcoder.com/feed/main/detail/87eadf9db3b14bb6912064ee79267c30)【阿里 Agent Infra 一面题库同题：状态管理、Checkpoint 与保存时机】【[拼多多 - Agent 开发岗（工程化 + 数据库）](https://www.nowcoder.com/discuss/926273867092430848)追问：断点恢复（服务重启后加载未完成状态）？】【[深圳tuitti视界之外实习一面](https://www.nowcoder.com/feed/main/detail/9b1329caf4b64389a0ab666585bda045)追问：这时候你是怎样恢复图的运行状态的？】
 
 **新手答**：“每一步保存消息，Pod 挂了以后读取最后一条继续执行。”
 
@@ -79,9 +41,31 @@ Worker 中断时还要验证 Checkpoint 之后的事件是否完整、Artifact �
 
 ---
 
+## Q：如何支撑几十万并发 Agent Task，并把它观测清楚？
+
+> 来源：高并发调度与 Agent Observability 高频题 / [顺极 Agent 开发二面](https://www.nowcoder.com/feed/main/detail/93a26b84a6634558b7228bf350c709b5) / [中国电信风控 Agent 二面](https://www.nowcoder.com/feed/main/detail/22e18a3d20734429aec41b37744beadc) / [互联网金融 Agent 开发三面](https://www.nowcoder.com/feed/main/detail/88c55ee65af04ac98c218b9d17c47a71) / [百度 Agent 一面](https://www.nowcoder.com/feed/main/detail/53542e2dcfd44b1d84b0ae55b4fc1b35)【阿里 Agent Infra 一面题库同题：MQ、背压、多租户、Scheduler 与 Worker 拆分】【[拼多多 - Agent 开发岗（工程化 + 数据库）](https://www.nowcoder.com/discuss/926273867092430848)追问：长耗时 Agent 的资源占用及并发优化？】
+
+**新手答**：“用 MQ 解耦，再水平扩容 Worker，接入日志、指标和链路追踪。”
+
+**高手答**：
+
+我会先澄清“几十万并发”是活跃会话、等待任务还是同时计算，并给出到达率、平均步骤数、各阶段耗时和 SLO。大量 Run 可能在等待 LLM、Tool 或人工事件，不能都占用 Worker。
+
+控制面按租户、优先级和资源类型分队列；用 visibility timeout/lease、ack、DLQ 和毒任务隔离保证消费；用 weighted fair scheduling、并发配额和 admission control 防止大租户挤占资源；对 LLM、GPU 和外部 Tool 分别实施背压，而不是只按 CPU 扩容。
+
+全量开放前还要把模型分层和成本预算放进准入：简单步骤走低成本模型，复杂或高风险步骤才升级；Run、租户和平台分别设置 Token、金额、并发和 Deadline 上限。容量规划用到达率、各资源阶段服务时间和长尾分布估算，不能把“sub-agent 最多开几个”写成固定常数。容器 CPU/内存水位、GPU/KV 容量、模型配额和外部 Tool 限流必须分别观测，哪个先饱和就在哪一层背压。
+
+Sandbox 容量要单独建模：区分冷启动、预热池、活跃执行和回收中实例，按租户与风险等级设并发配额。扩容信号不只看队列长度，还要看队列等待时间、启动耗时、CPU/内存/磁盘水位和回收失败率。预热复用必须先验证文件、进程、缓存和凭证已清理，否则优先牺牲冷启动时延而保持一次性隔离。
+
+一个 Run 是根 Trace，模型、检索、工具、Sandbox 和状态提交是 Span。核心指标包括任务语义成功率、基础设施失败率、队列等待、端到端延迟、步骤数、Token/Cost 和 `UNKNOWN` 副作用数。Prompt、Tool 参数和结果可能包含隐私，必须脱敏、采样、分级存储和审计，不能直接放进高基数 Metrics Label。
+
+**差距在哪**：新手会画 Queue + Worker，高手先定义负载模型，并同时处理公平性、下游瓶颈和可观测数据治理。
+
+---
+
 ## Q：一次 Agent 请求的完整执行链路是什么？
 
-> 来源：[字节跳动 Agent 后端开发业务终面](https://www.nowcoder.com/feed/main/detail/1dd33c4b7bda453a82f7d645bde7f3ff) / [阿里控股 Agent Infra 二面](https://www.nowcoder.com/feed/main/detail/627844d5923149b6ac46a631b2b41d5a) / Agent Runtime 完整管线设计高频题【字节火山引擎 Managed Agent 一面同题】【阿里 Agent Infra 一面题库同题】
+> 来源：[字节跳动 Agent 后端开发业务终面](https://www.nowcoder.com/feed/main/detail/1dd33c4b7bda453a82f7d645bde7f3ff) / [阿里控股 Agent Infra 二面](https://www.nowcoder.com/feed/main/detail/627844d5923149b6ac46a631b2b41d5a) / Agent Runtime 完整管线设计高频题【字节火山引擎 Managed Agent 一面同题】【阿里 Agent Infra 一面题库同题】【[深信服Agent开发实习生一面二面，长时间被吊着，最终被横向掉了](https://www.nowcoder.com/feed/main/detail/14b2c379ae434062a009aefea9fc5df9)追问：处理流程可以讲一下吗？整体链路是怎样的？】【[百度Agent一面](https://www.nowcoder.com/feed/main/detail/72858aade19d443facc870fea8bb134f)追问：如果问某上市公司去年毛利率下降，Agent 收到 Prompt 后的完整流程是什么？】
 
 **新手答**：“用户请求模型，模型调用工具，拿到结果后继续推理。”
 
@@ -105,9 +89,52 @@ Worker 中断时还要验证 Checkpoint 之后的事件是否完整、Artifact �
 
 ---
 
+## Q：Kubernetes Pod/Deployment 从提交到就绪经历哪些控制链路？
+
+> 来源：[百度 AI Infra 校招面经](https://www.nowcoder.com/feed/main/detail/436228d68ccb4ec78d08644bc9227dec) / [虾皮 AI Infra 实习一面](https://www.nowcoder.com/feed/main/detail/e610f57cfd3548cd96a27d92e2f8b25e) / [虾皮 AI Infra 实习二面](https://www.nowcoder.com/feed/main/detail/62b9123e4b7f497285e7d6f68844cdd6) / [字节社招一面](https://www.nowcoder.com/feed/main/detail/a385d6cc457d47c99c03cb8ea752ab89)【阿里 Agent Infra 一面题库追问：Kubernetes Scheduler 基本调度流程】
+
+**新手答**：“请求交给 API Server，Scheduler 选节点，Kubelet 拉起容器。”
+
+**高手答**：
+
+客户端请求先经过 API Server 的鉴权、准入和校验，再持久化到 etcd。Deployment Controller 通过 watch/Informer 观察期望状态并创建 ReplicaSet，ReplicaSet 再创建 Pod。Scheduler 为未绑定 Pod 做过滤、评分并写入节点绑定；目标节点上的 Kubelet 调用 CRI 拉镜像和启动容器，按声明协调 CSI 存储与 CNI 网络。探针通过后 Pod 才 Ready，Service 对应的 EndpointSlice 随之更新。
+
+这是一组异步、最终一致的 Reconcile，不是一条同步 RPC。CSI、CNI 的具体调用位置还受运行时、插件和 Kubernetes 版本影响，回答时应说明组件责任，不硬背一条固定时序。
+
+**差距在哪**：新手背组件顺序，高手能讲清对象所有权、watch/reconcile、调度绑定与数据面就绪的边界。
+
+---
+
+## Q：Tool 已成功但 Runtime 在写状态前宕机，如何避免重复副作用？
+
+> 来源：分布式幂等与部分失败高频题【[多益三面](https://www.nowcoder.com/discuss/922801355649974272)同题】【阿里 Agent Infra 一面题库同题：幂等、Exactly Once 与 Tool 部分成功】【[字节agent一面](https://www.nowcoder.com/feed/main/detail/612a1c20eea744a288b142f5b43f57e1)追问：Agent 超时重复下单是高风险问题，你们怎么实现幂等避免重复操作？】【[阿里边缘bu 秋招一面 （已过）](https://www.nowcoder.com/feed/main/detail/bdebbb6088b6405e9eb2bd2c345acb6e)追问：如果工具调用成功，但 Redis Checkpoint 写入失败，系统如何恢复并避免重复执行？】
+
+**新手答**：“给 Tool Call 加一个唯一 ID，恢复时查数据库。”
+
+**高手答**：
+
+唯一 ID 只有被副作用边界识别才有价值。我会为逻辑动作生成稳定的 `execution_id`，重试时保持不变，并优先把它传给下游作为幂等键：
+
+```text
+PENDING → DISPATCHED → RUNNING → SUCCEEDED
+                              ├→ FAILED
+                              └→ UNKNOWN
+```
+
+- 下游支持幂等键：重复请求返回同一业务结果；
+- 同一数据库内：用唯一约束、事务或 Transactional Outbox；
+- 下游支持查询：按业务键查询并对账；
+- 下游既不幂等也不可查询：超时后标记 `UNKNOWN`，交由人工确认或补偿流程。
+
+对支付、发消息、删除资源等操作还应增加审批、操作分级和审计。Saga 补偿也不等于回滚，补偿本身可能失败并且必须幂等。
+
+**差距在哪**：新手只说“去重”，高手知道最危险的是执行结果未知，并能按下游能力选择事务、对账或人工介入。
+
+---
+
 ## Q：如果让你设计一个 Agent Runtime，你会怎么拆？
 
-> 来源：Agent Infra / 平台工程系统设计高频题 / [字节中国交易与广告 AI 应用开发一面](https://www.nowcoder.com/feed/main/detail/b34f6902e8544fe2953696ed52e49dba)【阿里 Agent Infra 一面题库追问：Runtime 定义、Framework 边界与无状态 Worker】
+> 来源：Agent Infra / 平台工程系统设计高频题 / [字节中国交易与广告 AI 应用开发一面](https://www.nowcoder.com/feed/main/detail/b34f6902e8544fe2953696ed52e49dba)【阿里 Agent Infra 一面题库追问：Runtime 定义、Framework 边界与无状态 Worker】【[百度 - Agent 研发岗（架构方向）](https://www.nowcoder.com/discuss/926273622006665216)追问：通用 Agent Runtime（兼容多种大模型）如何设计？】
 
 **新手答**：“接入 LLM，再提供工具、Memory 和日志，最后部署到 Kubernetes。”
 
@@ -134,33 +161,6 @@ LangChain、LangGraph 等 Framework 主要提供 Agent/Graph 的开发抽象；R
 对发送消息、付款、写外部系统等不可逆副作用，取消只能阻止尚未发生的动作；已分发但结果未知的进入 `UNKNOWN`，通过幂等查询、对账或补偿收敛。最终给用户的结果应区分“已取消且无副作用”、“部分完成”和“结果待确认”，并保留已完成步骤的证据。
 
 **差距在哪**：新手罗列组件，高手先定义执行语义，再说明状态所有权、并发控制和版本边界。
-
----
-
-## Q：Tool 已成功但 Runtime 在写状态前宕机，如何避免重复副作用？
-
-> 来源：分布式幂等与部分失败高频题【[多益三面](https://www.nowcoder.com/discuss/922801355649974272)同题】【阿里 Agent Infra 一面题库同题：幂等、Exactly Once 与 Tool 部分成功】
-
-**新手答**：“给 Tool Call 加一个唯一 ID，恢复时查数据库。”
-
-**高手答**：
-
-唯一 ID 只有被副作用边界识别才有价值。我会为逻辑动作生成稳定的 `execution_id`，重试时保持不变，并优先把它传给下游作为幂等键：
-
-```text
-PENDING → DISPATCHED → RUNNING → SUCCEEDED
-                              ├→ FAILED
-                              └→ UNKNOWN
-```
-
-- 下游支持幂等键：重复请求返回同一业务结果；
-- 同一数据库内：用唯一约束、事务或 Transactional Outbox；
-- 下游支持查询：按业务键查询并对账；
-- 下游既不幂等也不可查询：超时后标记 `UNKNOWN`，交由人工确认或补偿流程。
-
-对支付、发消息、删除资源等操作还应增加审批、操作分级和审计。Saga 补偿也不等于回滚，补偿本身可能失败并且必须幂等。
-
-**差距在哪**：新手只说“去重”，高手知道最危险的是执行结果未知，并能按下游能力选择事务、对账或人工介入。
 
 ---
 
@@ -205,6 +205,22 @@ Sandbox 运行的是不可信代码，目标不只是限制 CPU 和内存，还�
 工程上要给轨迹标记 `policy_version`，设置最大滞后和有界队列，对过旧样本丢弃、降权或重采；是否使用重要性采样、裁剪等校正必须服从具体算法，不能套一个万能公式。监控应同时看版本滞后分布、队列等待、有效样本量、KL、吞吐和 Reward，而非只看 MFU。
 
 **差距在哪**：新手只看吞吐，高手能把调度产生的数据陈旧性连接到算法偏差，并给出可观测门槛。
+
+---
+
+## Q：Agent Router 应以什么运行形态存在，请求数据流如何设计？
+
+> 来源：[字节 AI Infra 实习一面](https://www.nowcoder.com/feed/main/detail/fcf6cf54ae5f437eb9356b98cc69fd9f)【[月之暗面（Moonshot）- Agent 应用开发岗](https://www.nowcoder.com/discuss/926274239747952640)追问：如何设计路由机制，将请求交给合适的 Agent？】
+
+**新手答**：“用一个模型判断请求应该交给哪个 Agent。”
+
+**高手答**：
+
+Router 可以是进程内库、Workflow 节点或独立服务。低延迟、策略简单时进程内更省开销；多团队共享、策略频繁变化或需要独立扩容审计时，服务化更合适。典型数据流是 Gateway 完成身份和租户解析，Router 提取任务特征、召回候选 Agent/Tool，再结合能力、权限、预算、延迟和健康度打分，最后交给 Runtime 创建带版本快照的 Run。
+
+策略要支持灰度、热更新、回滚和确定性 Fallback，并记录候选集、决策版本与结果反馈。这里讨论的是通用 Router 设计，不把某个项目中的同名组件当成行业标准。
+
+**差距在哪**：新手只谈分类准确率，高手会交代部署边界、权限门禁、策略版本和端到端数据流。
 
 ---
 
@@ -353,22 +369,6 @@ Driver 提交 Task/Actor，Raylet 按资源和放置约束调度 Worker，GCS �
 Actor 与 Rollout 共置可降低权重传输成本，却会产生显存和计算争用；分离部署隔离更好，但增加网络和同步开销。具体角色、同步协议和一致性强度取决于框架，回答应先给不变量，再谈实现。
 
 **差距在哪**：新手只会画训练循环，高手能说明资源编排、权重版本、轨迹可追溯性和共置取舍。
-
----
-
-## Q：Agent Router 应以什么运行形态存在，请求数据流如何设计？
-
-> 来源：[字节 AI Infra 实习一面](https://www.nowcoder.com/feed/main/detail/fcf6cf54ae5f437eb9356b98cc69fd9f)
-
-**新手答**：“用一个模型判断请求应该交给哪个 Agent。”
-
-**高手答**：
-
-Router 可以是进程内库、Workflow 节点或独立服务。低延迟、策略简单时进程内更省开销；多团队共享、策略频繁变化或需要独立扩容审计时，服务化更合适。典型数据流是 Gateway 完成身份和租户解析，Router 提取任务特征、召回候选 Agent/Tool，再结合能力、权限、预算、延迟和健康度打分，最后交给 Runtime 创建带版本快照的 Run。
-
-策略要支持灰度、热更新、回滚和确定性 Fallback，并记录候选集、决策版本与结果反馈。这里讨论的是通用 Router 设计，不把某个项目中的同名组件当成行业标准。
-
-**差距在哪**：新手只谈分类准确率，高手会交代部署边界、权限门禁、策略版本和端到端数据流。
 
 ---
 

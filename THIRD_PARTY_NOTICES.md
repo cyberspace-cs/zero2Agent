@@ -74,3 +74,14 @@ The answers derived from the 2026-08-29 through 2026-09-02 interview audit were 
 - [Linux `/proc/<pid>/status`](https://man7.org/linux/man-pages/man5/proc_pid_status.5.html), [`/proc/<pid>/stat`](https://man7.org/linux/man-pages/man5/proc_pid_stat.5.html), [`pidfd_open`](https://man7.org/linux/man-pages/man2/pidfd_open.2.html), and [cgroup v2](https://docs.kernel.org/admin-guide/cgroup-v2.html) - process observation fields, start time, stable process handles, resource boundaries, and controlled process-group actions.
 
 No upstream prose, code, diagrams, datasets, or benchmark results are reproduced. Version-specific behavior remains tied to the linked documentation; the surrounding architecture and safety recommendations are independent engineering analysis.
+
+## Weekly Interview Answer References (2026-09-08)
+
+The answers derived from the 2026-09-02 through 2026-09-08 interview audit were independently written and checked against these primary references:
+
+- [LLaMA-Factory](https://github.com/hiyouga/LlamaFactory) and [Hugging Face TRL](https://huggingface.co/docs/trl/index) - current training-tool scope, trainer surfaces, and framework-selection boundaries.
+- [DAPO](https://arxiv.org/abs/2503.14476) - the paper's no-KL training setting, asymmetric clipping, dynamic sampling, token-level policy-gradient, and overlong-reward design.
+- [GitHub Spec Kit](https://github.com/github/spec-kit) - the constitution, specification, planning, and task workflow used as one concrete Spec-Driven Development implementation.
+- [EnCodec](https://github.com/facebookresearch/encodec) and [SpeechTokenizer](https://arxiv.org/abs/2308.16692) - neural audio codec, residual vector quantization, and hierarchical semantic/acoustic Token design.
+
+No upstream prose, code, diagrams, datasets, or benchmark claims are reproduced. Framework behavior remains tied to the linked versions and current documentation; the architecture, evaluation, and safety recommendations are independent engineering analysis.

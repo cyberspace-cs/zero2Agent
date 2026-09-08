@@ -13,9 +13,23 @@ AI Infra 不是“给 Kubernetes 加几台 GPU”。模型训练关心吞吐、C
 
 ---
 
+## Q：如何用 Roofline 和算术强度指导 CUDA 算子优化？从 GEMM 分块到寄存器压力如何逐层定位？
+
+> 来源：[美团北斗 AI Infra 面经](https://www.nowcoder.com/feed/main/detail/841452f926a140babb84585de97c04aa)、[拼多多 AI Infra 面经](https://www.nowcoder.com/feed/main/detail/9e1f4f4b8642496e85cf7802d03112df)、[小鹏 AI Infra 面经](https://www.nowcoder.com/feed/main/detail/a79383aa92f64e8eb4e85959bf2660a0)、[快手 AI Infra 面经](https://www.nowcoder.com/feed/main/detail/c582fdfbc29d4c93ac9044005ad0a311)、[飞腾 AI Infra 面经](https://www.nowcoder.com/feed/main/detail/90c405df0a0f4dd99298768496b0c942)、[字节 AI Infra 二面](https://www.nowcoder.com/feed/main/detail/eaea5cf9e9e44c5bb5fecf3f1d8243ce)、[太初 AI Infra 面经](https://www.nowcoder.com/feed/main/detail/45c0b82115024f16a88ad9a37f2ab398)、[壁仞 AI Infra 面经](https://www.nowcoder.com/feed/main/detail/5baf1aaa7ff646a8a38d9c7ece43a808)、[寒武纪 AI Infra 面经](https://www.nowcoder.com/feed/main/detail/7dfe46da13ad4ae8a3dd94c3ca7f5d05)【[华为 - 大模型算法岗（AI Infra / 训练优化）](https://www.nowcoder.com/discuss/926272625410674688)追问：如何用 Roofline 模型判断带宽瓶颈 vs 计算瓶颈？】【[昆仑芯 0903 一面（ai 高性能开发）](https://www.nowcoder.com/feed/main/detail/65b9990e774a4331bb603f0cf1ca4a88)追问：介绍一下 Roofline 模型和算术强度。】【[0907 百度一面 （AI Infra）](https://www.nowcoder.com/feed/main/detail/91f5187146864de5878349a2ecf497ce)追问：大矩阵 GEMM 在 DCU 上如何切分和实现？】
+
+**新手答**：“多用 Shared Memory、增加线程数，再做算子融合。”
+
+**高手答**：
+
+先以 `算术强度 = FLOPs / 搬运字节数` 判断 Kernel 更可能受计算峰值还是内存带宽约束，再用 Profiler 验证。Memory-bound 时优先检查合并访问、分块复用、向量化、减少中间写回和 Fusion；Compute-bound 时再看 Tensor Core 路径、数据布局和指令流水。GEMM 的 Tile 不能越大越好：更大的复用也会增加寄存器和 Shared Memory，占用过高可能降低驻留 Block，甚至发生 Register Spill。可靠流程是先建立正确 Baseline，再测不同 Shape，定位瓶颈、提出单一假设、微基准验证，并检查数值误差。前缀和、Reduce、Softmax、转置等手撕题都应沿这条方法回答。
+
+**差距在哪**：新手堆优化技巧，高手先建立性能模型，再用证据决定优化顺序并守住正确性。
+
+---
+
 ## Q：KV Cache 占用如何计算，为什么不能只按请求数做容量规划？
 
-> 来源：[抖音搜推 AI Infra 一面](https://www.nowcoder.com/feed/main/detail/e5f1a15d50414c86a0e64f2dbc13a02f)、[百度 AI Infra 一面](https://www.nowcoder.com/feed/main/detail/05c5fe23173245a4ab39b3dddf2b95bb)、[字节 App Infra Agent 一面](https://www.nowcoder.com/feed/main/detail/0bec32fbb3344ff98f16b97f47c7b857)、[字节社招一面](https://www.nowcoder.com/feed/main/detail/a385d6cc457d47c99c03cb8ea752ab89)【阿里 Agent Infra 一面题库追问：KV Cache 原理】
+> 来源：[抖音搜推 AI Infra 一面](https://www.nowcoder.com/feed/main/detail/e5f1a15d50414c86a0e64f2dbc13a02f)、[百度 AI Infra 一面](https://www.nowcoder.com/feed/main/detail/05c5fe23173245a4ab39b3dddf2b95bb)、[字节 App Infra Agent 一面](https://www.nowcoder.com/feed/main/detail/0bec32fbb3344ff98f16b97f47c7b857)、[字节社招一面](https://www.nowcoder.com/feed/main/detail/a385d6cc457d47c99c03cb8ea752ab89)【阿里 Agent Infra 一面题库追问：KV Cache 原理】【[华为 - 大模型算法岗（AI Infra / 训练优化）](https://www.nowcoder.com/discuss/926272625410674688)追问：Transformer 推理中 KV Cache 显存估算及 batch 增大瓶颈？】
 
 **新手答**：“KV Cache 和上下文长度成正比，显存不够就减少并发。”
 
@@ -36,9 +50,23 @@ KV bytes ≈ 2 × layers × tokens × kv_heads × head_dim × bytes_per_element
 
 ---
 
+## Q：如何估算 All-Reduce/All-to-All 通信量并实现计算通信重叠？拓扑和 RDMA 如何影响结果？
+
+> 来源：[阶跃星辰 AI Infra 面经](https://www.nowcoder.com/feed/main/detail/320def38cd484da3bb26b01932996ef2)、[快手 AI Infra 面经](https://www.nowcoder.com/feed/main/detail/eccb5cafdfce452c8d56374ef070685d)、[字节 AI Infra 面经](https://www.nowcoder.com/feed/main/detail/b99b6a7c7ff54453a2451d43488ade5a)、[AI Infra 小厂面经](https://www.nowcoder.com/feed/main/detail/166e576d5afa4a298cf9492ed51bed04)、[数坤科技 AI Infra 面经](https://www.nowcoder.com/feed/main/detail/f6b2716a6e1b4c0f96564ca06af3609b)、[阿里控股 AI Infra 面经](https://www.nowcoder.com/feed/main/detail/7d75c82afe80416ea8a489a18b79b144)、[爱奇艺 AI 平台研发面经](https://www.nowcoder.com/discuss/918635351327924224)【[华为 - 大模型算法岗（AI Infra / 训练优化）](https://www.nowcoder.com/discuss/926272625410674688)追问：如何优化分布式推理中的 AllReduce 通信？】【[阿里巴巴（阿里云）- Agent Infra](https://www.nowcoder.com/discuss/926273487512113152)追问：如何优化分布式 AllReduce 通信？；如何平衡多机多卡推理中的通信与计算？】
+
+**新手答**：“All-Reduce 用 Ring，通信和反向计算异步执行就能隐藏开销。”
+
+**高手答**：
+
+先从并行切分推导每次 Collective 的参与组、Payload 和依赖，再用 `通信时间 ≈ 启动时延 × 轮次 + 字节数 / 有效带宽` 建模。All-Reduce 常用于聚合梯度或 TP 部分结果；MoE 的 All-to-All 还会受 Token 路由不均和 Straggler 影响。重叠不是简单开异步：只有某个 Bucket 已就绪且后续计算不依赖其结果时，才能用独立 Stream/通信引擎覆盖，并要防止计算和通信争抢同一带宽。实际性能还取决于 NVLink/NVSwitch、PCIe、NUMA、跨机网络和 RDMA 路径。最终用 Timeline 检查依赖与空洞，并按拓扑选择分组、Bucket 和 Collective 算法。
+
+**差距在哪**：新手只背通信算子，高手能从张量形状估量、识别依赖，并用真实拓扑验证重叠。
+
+---
+
 ## Q：CUDA 的 Thread、Warp、Block、Grid 和 SM 如何映射？SIMT、同步与 Warp 分歧如何影响性能？
 
-> 来源：[小马智行 AI Infra 实习面经](https://www.nowcoder.com/feed/main/detail/0e543b8a02b84b05950e55851687450f)、[OPPO AI Infra 实习一面](https://www.nowcoder.com/feed/main/detail/d8bc7618c7234ca8b67d18866ddc4542)、[蔚来 AI Infra 实习面经](https://www.nowcoder.com/feed/main/detail/738d29de77ef4675bbac0a7d18ed1371)、[沐曦 AI Infra 实习一面](https://www.nowcoder.com/feed/main/detail/5f3629b12be346de8dbc954a75d0990f)
+> 来源：[小马智行 AI Infra 实习面经](https://www.nowcoder.com/feed/main/detail/0e543b8a02b84b05950e55851687450f)、[OPPO AI Infra 实习一面](https://www.nowcoder.com/feed/main/detail/d8bc7618c7234ca8b67d18866ddc4542)、[蔚来 AI Infra 实习面经](https://www.nowcoder.com/feed/main/detail/738d29de77ef4675bbac0a7d18ed1371)、[沐曦 AI Infra 实习一面](https://www.nowcoder.com/feed/main/detail/5f3629b12be346de8dbc954a75d0990f)【[0907 百度一面 （AI Infra）](https://www.nowcoder.com/feed/main/detail/91f5187146864de5878349a2ecf497ce)追问：SIMT 的特点是什么？遇到分支时会发生什么？】
 
 **新手答**：“Grid 里有很多 Block，Block 里有很多 Thread，线程越多性能越好。”
 
@@ -50,17 +78,31 @@ Kernel 启动后形成 Grid，Block 被调度到 SM；Block 内线程再按 Warp
 
 ---
 
-## Q：如何用 Roofline 和算术强度指导 CUDA 算子优化？从 GEMM 分块到寄存器压力如何逐层定位？
+## Q：FlashAttention 为什么更快？Online Softmax、Tiling、重计算和不同版本分别解决什么瓶颈？
 
-> 来源：[美团北斗 AI Infra 面经](https://www.nowcoder.com/feed/main/detail/841452f926a140babb84585de97c04aa)、[拼多多 AI Infra 面经](https://www.nowcoder.com/feed/main/detail/9e1f4f4b8642496e85cf7802d03112df)、[小鹏 AI Infra 面经](https://www.nowcoder.com/feed/main/detail/a79383aa92f64e8eb4e85959bf2660a0)、[快手 AI Infra 面经](https://www.nowcoder.com/feed/main/detail/c582fdfbc29d4c93ac9044005ad0a311)、[飞腾 AI Infra 面经](https://www.nowcoder.com/feed/main/detail/90c405df0a0f4dd99298768496b0c942)、[字节 AI Infra 二面](https://www.nowcoder.com/feed/main/detail/eaea5cf9e9e44c5bb5fecf3f1d8243ce)、[太初 AI Infra 面经](https://www.nowcoder.com/feed/main/detail/45c0b82115024f16a88ad9a37f2ab398)、[壁仞 AI Infra 面经](https://www.nowcoder.com/feed/main/detail/5baf1aaa7ff646a8a38d9c7ece43a808)、[寒武纪 AI Infra 面经](https://www.nowcoder.com/feed/main/detail/7dfe46da13ad4ae8a3dd94c3ca7f5d05)
+> 来源：[阿里国际 AI Infra 实习面经](https://www.nowcoder.com/feed/main/detail/6cbfd441972d4a96ae47e1cdf54a3fef)、[快手 AI Infra 校招面经](https://www.nowcoder.com/feed/main/detail/eccb5cafdfce452c8d56374ef070685d)、[美团北斗 AI Infra 面经](https://www.nowcoder.com/feed/main/detail/841452f926a140babb84585de97c04aa)、[混元 AI Infra 面经](https://www.nowcoder.com/feed/main/detail/2a9106374f0842c6af57cdb3acb51190)、[科大讯飞 AI Infra 面经](https://www.nowcoder.com/feed/main/detail/140a45bc0b314798a0d94b512cb7ea90)、[飞腾 AI Infra 面经](https://www.nowcoder.com/feed/main/detail/90c405df0a0f4dd99298768496b0c942)、[阿里校招 AI Infra 面经](https://www.nowcoder.com/feed/main/detail/84dc13404a6048c7b0f8431179d33623)、[爱奇艺 AI 平台研发面经](https://www.nowcoder.com/discuss/918635351327924224)【[华为 - 大模型算法岗（AI Infra / 训练优化）](https://www.nowcoder.com/discuss/926272625410674688)追问：FlashAttention 如何减少 HBM 访问？】【[阶跃星辰（Stepfun）- 大模型算法岗（Post-train）](https://www.nowcoder.com/discuss/926273007276814336)追问：FlashAttention 加速原理？】
 
-**新手答**：“多用 Shared Memory、增加线程数，再做算子融合。”
+**新手答**：“FlashAttention 把复杂度从平方降到线性，所以显存更少、速度更快。”
 
 **高手答**：
 
-先以 `算术强度 = FLOPs / 搬运字节数` 判断 Kernel 更可能受计算峰值还是内存带宽约束，再用 Profiler 验证。Memory-bound 时优先检查合并访问、分块复用、向量化、减少中间写回和 Fusion；Compute-bound 时再看 Tensor Core 路径、数据布局和指令流水。GEMM 的 Tile 不能越大越好：更大的复用也会增加寄存器和 Shared Memory，占用过高可能降低驻留 Block，甚至发生 Register Spill。可靠流程是先建立正确 Baseline，再测不同 Shape，定位瓶颈、提出单一假设、微基准验证，并检查数值误差。前缀和、Reduce、Softmax、转置等手撕题都应沿这条方法回答。
+FlashAttention 的核心是 IO-aware，而不是把稠密 Attention 的数学计算复杂度改成线性。标准实现会把较大的 Score/Probability 中间矩阵写入显存；FlashAttention 对 Q、K、V 分块，在片上存储中完成局部计算，并用 Online Softmax 维护每行的运行最大值和归一化和，从而避免完整中间矩阵落到高带宽内存。反向阶段可通过保存少量统计量并重计算部分结果，交换存储与计算。不同版本主要继续改进工作划分、并行度、流水和新硬件能力利用，具体支持受 GPU 架构、数据类型、Head Dimension 和软件版本约束，必须以原论文和官方实现为准。
 
-**差距在哪**：新手堆优化技巧，高手先建立性能模型，再用证据决定优化顺序并守住正确性。
+**差距在哪**：新手只背“省显存”，高手能推导 Online Softmax 的正确性，并区分 FLOPs 与 IO 复杂度。
+
+---
+
+## Q：量化后为什么不一定更快？量化 Matmul、反量化、Prefill 和 Decode 的瓶颈如何判断？
+
+> 来源：[美团北斗 AI Infra 面经](https://www.nowcoder.com/feed/main/detail/841452f926a140babb84585de97c04aa)、[拼多多 AI Infra 面经](https://www.nowcoder.com/feed/main/detail/9e1f4f4b8642496e85cf7802d03112df)、[混元 AI Infra 面经](https://www.nowcoder.com/feed/main/detail/2a9106374f0842c6af57cdb3acb51190)、[爱奇艺 AI 平台研发面经](https://www.nowcoder.com/discuss/918635351327924224)【[昆仑芯 0903 一面（ai 高性能开发）](https://www.nowcoder.com/feed/main/detail/65b9990e774a4331bb603f0cf1ca4a88)追问：怎么判断一个算子是带宽瓶颈还是计算瓶颈？】
+
+**新手答**：“量化减少权重和显存占用，所以所有阶段都会更快。”
+
+**高手答**：
+
+量化首先减少存储和搬运字节数，但端到端速度还取决于计算路径。若硬件与 Kernel 原生支持该格式，Decode 这类频繁读取权重、带宽敏感的阶段更可能受益；Prefill 的大矩阵计算利用率较高，收益可能受反量化、Scale 读取、数据重排和累加格式限制。某些 Batch、Shape 或算子没有合适 Kernel 时还会回退到较高精度，甚至增加转换和 Launch 开销。排查时先确认实际选中的 Kernel 与输入格式，再分别测权重带宽、反量化占比、Tensor Core/矩阵单元利用、TTFT、TPOT 和端到端成本，同时做质量回归。结论必须绑定模型、硬件、框架版本和流量分布。
+
+**差距在哪**：新手把压缩率等同于加速比，高手能沿真实数据路径解释量化收益为何因阶段和实现而异。
 
 ---
 
@@ -89,20 +131,6 @@ Kernel 启动后形成 Grid，Block 被调度到 SM；Block 内线程再按 Warp
 Prefill 一次处理多个输入 Token，矩阵通常更大、并行度更高，Attention 还随序列长度增加，因此更容易有效使用矩阵计算单元；Decode 每步只生成少量 Token，常表现为小 GEMM/GEMV，并反复读取权重和持续增长的 KV Cache，更受带宽、调度和单步延迟影响。但这只是工作负载判断，不是所有模型和 Batch 下的定律。Prefill 可从 FlashAttention、分块、张量并行和长 Prompt 准入入手；Decode 更依赖 Continuous Batching、KV 布局/量化、算子融合和投机采样。量化是否提速还要看对应 Shape 是否有高效 Kernel，以及反量化开销。验证时分别看 TTFT、TPOT、算力与带宽指标。
 
 **差距在哪**：新手背阶段标签，高手从矩阵形状和数据移动推导瓶颈，再为两个阶段选择不同优化。
-
----
-
-## Q：如何估算 All-Reduce/All-to-All 通信量并实现计算通信重叠？拓扑和 RDMA 如何影响结果？
-
-> 来源：[阶跃星辰 AI Infra 面经](https://www.nowcoder.com/feed/main/detail/320def38cd484da3bb26b01932996ef2)、[快手 AI Infra 面经](https://www.nowcoder.com/feed/main/detail/eccb5cafdfce452c8d56374ef070685d)、[字节 AI Infra 面经](https://www.nowcoder.com/feed/main/detail/b99b6a7c7ff54453a2451d43488ade5a)、[AI Infra 小厂面经](https://www.nowcoder.com/feed/main/detail/166e576d5afa4a298cf9492ed51bed04)、[数坤科技 AI Infra 面经](https://www.nowcoder.com/feed/main/detail/f6b2716a6e1b4c0f96564ca06af3609b)、[阿里控股 AI Infra 面经](https://www.nowcoder.com/feed/main/detail/7d75c82afe80416ea8a489a18b79b144)、[爱奇艺 AI 平台研发面经](https://www.nowcoder.com/discuss/918635351327924224)
-
-**新手答**：“All-Reduce 用 Ring，通信和反向计算异步执行就能隐藏开销。”
-
-**高手答**：
-
-先从并行切分推导每次 Collective 的参与组、Payload 和依赖，再用 `通信时间 ≈ 启动时延 × 轮次 + 字节数 / 有效带宽` 建模。All-Reduce 常用于聚合梯度或 TP 部分结果；MoE 的 All-to-All 还会受 Token 路由不均和 Straggler 影响。重叠不是简单开异步：只有某个 Bucket 已就绪且后续计算不依赖其结果时，才能用独立 Stream/通信引擎覆盖，并要防止计算和通信争抢同一带宽。实际性能还取决于 NVLink/NVSwitch、PCIe、NUMA、跨机网络和 RDMA 路径。最终用 Timeline 检查依赖与空洞，并按拓扑选择分组、Bucket 和 Collective 算法。
-
-**差距在哪**：新手只背通信算子，高手能从张量形状估量、识别依赖，并用真实拓扑验证重叠。
 
 ---
 
@@ -148,20 +176,6 @@ CPU 用较少但复杂的核心、较强缓存和分支预测换低延迟与通�
 
 ---
 
-## Q：量化后为什么不一定更快？量化 Matmul、反量化、Prefill 和 Decode 的瓶颈如何判断？
-
-> 来源：[美团北斗 AI Infra 面经](https://www.nowcoder.com/feed/main/detail/841452f926a140babb84585de97c04aa)、[拼多多 AI Infra 面经](https://www.nowcoder.com/feed/main/detail/9e1f4f4b8642496e85cf7802d03112df)、[混元 AI Infra 面经](https://www.nowcoder.com/feed/main/detail/2a9106374f0842c6af57cdb3acb51190)、[爱奇艺 AI 平台研发面经](https://www.nowcoder.com/discuss/918635351327924224)
-
-**新手答**：“量化减少权重和显存占用，所以所有阶段都会更快。”
-
-**高手答**：
-
-量化首先减少存储和搬运字节数，但端到端速度还取决于计算路径。若硬件与 Kernel 原生支持该格式，Decode 这类频繁读取权重、带宽敏感的阶段更可能受益；Prefill 的大矩阵计算利用率较高，收益可能受反量化、Scale 读取、数据重排和累加格式限制。某些 Batch、Shape 或算子没有合适 Kernel 时还会回退到较高精度，甚至增加转换和 Launch 开销。排查时先确认实际选中的 Kernel 与输入格式，再分别测权重带宽、反量化占比、Tensor Core/矩阵单元利用、TTFT、TPOT 和端到端成本，同时做质量回归。结论必须绑定模型、硬件、框架版本和流量分布。
-
-**差距在哪**：新手把压缩率等同于加速比，高手能沿真实数据路径解释量化收益为何因阶段和实现而异。
-
----
-
 ## Q：GPU 内存层次如何使用？Pinned Memory、Shared Memory、Bank Conflict 与异步 H2D/D2H 分别解决什么问题？
 
 > 来源：[阿里国际 AI Infra 实习面经](https://www.nowcoder.com/feed/main/detail/6cbfd441972d4a96ae47e1cdf54a3fef)、[阶跃星辰 AI Infra 实习面经](https://www.nowcoder.com/feed/main/detail/320def38cd484da3bb26b01932996ef2)、[快手 AI Infra 校招面经](https://www.nowcoder.com/feed/main/detail/eccb5cafdfce452c8d56374ef070685d)、[蔚来 AI Infra 实习面经](https://www.nowcoder.com/feed/main/detail/738d29de77ef4675bbac0a7d18ed1371)、[文远知行 AI Infra 面经](https://www.nowcoder.com/feed/main/detail/cc35269c89d645c3a510c22504355ce0)、[寒武纪 AI Infra 面经](https://www.nowcoder.com/feed/main/detail/7dfe46da13ad4ae8a3dd94c3ca7f5d05)
@@ -173,20 +187,6 @@ CPU 用较少但复杂的核心、较强缓存和分支预测换低延迟与通�
 优化目标是减少高代价数据移动并提高复用。寄存器最靠近线程，Shared Memory 由 Block 显式共享，L2/显存容量更大但访问代价更高；只有数据会被重复使用且分块、同步成本可摊薄时，搬进 Shared Memory 才有收益。Bank Conflict 会让同一 Warp 的某些 Shared Memory 访问产生额外事务，具体映射要按目标架构验证。Pinned Host Memory 便于 DMA 和异步传输，但会占用不可分页的主机内存。H2D、Kernel、D2H 能否重叠，还取决于设备 copy engine、独立 Stream、锁页缓冲区和正确的事件依赖，不能只调用异步 API 就认定已经并行。
 
 **差距在哪**：新手把内存类型当速度排名，高手会按复用、事务、同步和软硬件条件判断收益。
-
----
-
-## Q：FlashAttention 为什么更快？Online Softmax、Tiling、重计算和不同版本分别解决什么瓶颈？
-
-> 来源：[阿里国际 AI Infra 实习面经](https://www.nowcoder.com/feed/main/detail/6cbfd441972d4a96ae47e1cdf54a3fef)、[快手 AI Infra 校招面经](https://www.nowcoder.com/feed/main/detail/eccb5cafdfce452c8d56374ef070685d)、[美团北斗 AI Infra 面经](https://www.nowcoder.com/feed/main/detail/841452f926a140babb84585de97c04aa)、[混元 AI Infra 面经](https://www.nowcoder.com/feed/main/detail/2a9106374f0842c6af57cdb3acb51190)、[科大讯飞 AI Infra 面经](https://www.nowcoder.com/feed/main/detail/140a45bc0b314798a0d94b512cb7ea90)、[飞腾 AI Infra 面经](https://www.nowcoder.com/feed/main/detail/90c405df0a0f4dd99298768496b0c942)、[阿里校招 AI Infra 面经](https://www.nowcoder.com/feed/main/detail/84dc13404a6048c7b0f8431179d33623)、[爱奇艺 AI 平台研发面经](https://www.nowcoder.com/discuss/918635351327924224)
-
-**新手答**：“FlashAttention 把复杂度从平方降到线性，所以显存更少、速度更快。”
-
-**高手答**：
-
-FlashAttention 的核心是 IO-aware，而不是把稠密 Attention 的数学计算复杂度改成线性。标准实现会把较大的 Score/Probability 中间矩阵写入显存；FlashAttention 对 Q、K、V 分块，在片上存储中完成局部计算，并用 Online Softmax 维护每行的运行最大值和归一化和，从而避免完整中间矩阵落到高带宽内存。反向阶段可通过保存少量统计量并重计算部分结果，交换存储与计算。不同版本主要继续改进工作划分、并行度、流水和新硬件能力利用，具体支持受 GPU 架构、数据类型、Head Dimension 和软件版本约束，必须以原论文和官方实现为准。
-
-**差距在哪**：新手只背“省显存”，高手能推导 Online Softmax 的正确性，并区分 FLOPs 与 IO 复杂度。
 
 ---
 
@@ -263,6 +263,28 @@ Serving 层通常需要 continuous batching、流式输出、请求取消、长�
 自动扩容要观察队列时间、Token 吞吐、KV Cache 使用率和可用 GPU，而不是只看利用率；模型加载和权重分发很慢，因此还需要预热容量和发布期间的双版本资源预算。
 
 **差距在哪**：新手把 LLM 当普通 HTTP 服务，高手理解 Prefill/Decode、动态批处理、KV Cache 与排队延迟。
+
+---
+
+## Q：模型版本升级如何做到可观测、可灰度、可回滚？
+
+> 来源：模型发布与稳定性高频题【[Momenta 大模型算法工程师一面](https://www.nowcoder.com/feed/main/detail/f7518c865e07491cb1518d288698813c)追问：离线效果更好为何仍保留旧模型】【[百度 - Agent 研发岗（架构方向）](https://www.nowcoder.com/discuss/926273622006665216)追问：模型能力下降时如何快速回滚与隔离？】
+
+**新手答**：“部署新版本，先放 10% 流量，指标异常就回滚。”
+
+**高手答**：
+
+发布单元必须绑定模型权重、Tokenizer、推理参数、量化方式、镜像和 Prompt/Adapter 兼容信息。上线前完成离线质量、安全、性能和资源回归；线上先 shadow 验证协议与容量，再按租户或任务类型 canary，避免随机流量掩盖分布差异。
+
+**追问：新模型离线效果更好，线上为什么仍可能保留旧模型？**
+
+离线分数不是发布决策的充分条件。新模型可能需要更多显存、降低可承载并发、拉高 TTFT/TPOT，或只在平均指标上提升而伤害关键业务切片；新算子、Tokenizer、量化和上下文长度还可能改变故障面。应把质量增益换算到目标流量与单位成本，在 shadow 中验证协议和资源，再用 canary 测真实收益。收益不足以覆盖容量、迁移和回滚风险时，保留旧模型是正确决策，不是技术保守。
+
+同时观察两类指标：系统指标包括 TTFT、TPOT、P99、错误率、OOM 和成本；质量指标包括任务成功率、拒答率、安全率和分层 Eval。质量指标通常反馈更慢，不能只靠五分钟技术监控判定成功。
+
+回滚也要预留旧版本权重、副本容量和路由配置，并考虑会话粘性、KV Cache 不兼容以及 Agent Run 的版本固定。Kubernetes [Deployment 官方文档](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/)提供滚动替换与回滚基础能力，但模型质量门禁、制品兼容和会话版本仍由 AI 平台负责。审计记录必须回答“谁在何时把哪套制品以什么配置发布给了哪些流量”。
+
+**差距在哪**：新手只有流量百分比，高手把制品一致性、质量评估、容量和有状态会话纳入发布计划。
 
 ---
 
@@ -362,28 +384,6 @@ Checkpoint 不只是模型权重，还可能包含 Optimizer、Scheduler、随�
 
 ---
 
-## Q：模型版本升级如何做到可观测、可灰度、可回滚？
-
-> 来源：模型发布与稳定性高频题【[Momenta 大模型算法工程师一面](https://www.nowcoder.com/feed/main/detail/f7518c865e07491cb1518d288698813c)追问：离线效果更好为何仍保留旧模型】
-
-**新手答**：“部署新版本，先放 10% 流量，指标异常就回滚。”
-
-**高手答**：
-
-发布单元必须绑定模型权重、Tokenizer、推理参数、量化方式、镜像和 Prompt/Adapter 兼容信息。上线前完成离线质量、安全、性能和资源回归；线上先 shadow 验证协议与容量，再按租户或任务类型 canary，避免随机流量掩盖分布差异。
-
-**追问：新模型离线效果更好，线上为什么仍可能保留旧模型？**
-
-离线分数不是发布决策的充分条件。新模型可能需要更多显存、降低可承载并发、拉高 TTFT/TPOT，或只在平均指标上提升而伤害关键业务切片；新算子、Tokenizer、量化和上下文长度还可能改变故障面。应把质量增益换算到目标流量与单位成本，在 shadow 中验证协议和资源，再用 canary 测真实收益。收益不足以覆盖容量、迁移和回滚风险时，保留旧模型是正确决策，不是技术保守。
-
-同时观察两类指标：系统指标包括 TTFT、TPOT、P99、错误率、OOM 和成本；质量指标包括任务成功率、拒答率、安全率和分层 Eval。质量指标通常反馈更慢，不能只靠五分钟技术监控判定成功。
-
-回滚也要预留旧版本权重、副本容量和路由配置，并考虑会话粘性、KV Cache 不兼容以及 Agent Run 的版本固定。Kubernetes [Deployment 官方文档](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/)提供滚动替换与回滚基础能力，但模型质量门禁、制品兼容和会话版本仍由 AI 平台负责。审计记录必须回答“谁在何时把哪套制品以什么配置发布给了哪些流量”。
-
-**差距在哪**：新手只有流量百分比，高手把制品一致性、质量评估、容量和有状态会话纳入发布计划。
-
----
-
 ## Q：AIOps 如何结合告警、Metrics、Logs、Trace 和服务拓扑完成证据驱动的 RCA，并安全执行自动处置？
 
 > 来源：阿里 Agent Infra 一面题库
@@ -401,6 +401,22 @@ RCA 层应输出带证据的候选列表，而不是一句确定性结论：哪�
 最后把确认根因、有效处置、失败尝试和新检测规则回写事件库与 Runbook。衡量 AIOps 不能只看“自动化次数”，还要看告警压缩率、候选根因 Top-K 命中率、MTTD/MTTR、误处置率、回滚率和实际减少的用户影响。
 
 **差距在哪**：新手让模型从相关性直接跳到重启，高手把影响确认、证据关联、因果验证、分级处置和 SLO 回验串成可审计闭环。
+
+---
+
+## Q：SpMV 和 GEMM 的计算、访存特征有什么不同？优化方向如何选择？
+
+> 来源：[沐曦 AI 工程师一面](https://www.nowcoder.com/feed/main/detail/af4c228ca96f4f05b415f816d36a718c)
+
+**新手答**：“GEMM 是稠密矩阵乘法，SpMV 是稀疏矩阵乘向量；前者算力密集，后者访存密集。”
+
+**高手答**：GEMM 的规则稠密布局允许分块复用 A/B Tile，具有较高算术强度，适合 Tensor Core、向量化、Shared Memory 和多级寄存器 Blocking；瓶颈可能随 Shape 从访存转为计算。SpMV 只处理非零元素，但 CSR/COO 等格式还要读取索引，访问 `x` 向量常不连续，每行非零数不均又会造成线程负载倾斜，因此通常受带宽、间接寻址和同步归约限制。
+
+SpMV 优化先按稀疏结构选格式和工作划分：规则块稀疏可用 BSR 提高向量化，极不均匀行要做分段或动态负载均衡，重排可能改善局部性但有预处理成本；GEMM 则围绕 Tile、布局、融合、Tensor Core 路径和寄存器压力调优。不能只比较 FLOPs，因为 SpMV 少算很多乘法，却可能为每个非零元素搬更多元数据。
+
+评测必须覆盖真实矩阵分布和多种 Shape，分别报告有效 GFLOPS、内存带宽、Load Balance、预处理时间和端到端延迟。若稀疏度不高或结构不适合硬件，稀疏实现可能比高效稠密 GEMM 更慢。
+
+**差距在哪**：新手只会按稀疏/稠密分类，高手能从算术强度、索引开销、负载不均和格式选择推导具体优化方向。
 
 ---
 
