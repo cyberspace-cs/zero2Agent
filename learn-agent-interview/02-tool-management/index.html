@@ -1,0 +1,3725 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+        (function(){var s=localStorage.getItem('z2a-theme');var t=s||(window.matchMedia('(prefers-color-scheme:light)').matches?'light':'dark');document.documentElement.setAttribute('data-theme',t);})();
+    </script>
+    <title>工具管理：参数校验、工具路由与百级工具库 | zero2Agent</title>
+    <meta name="description" content="Agent 工具管理面试题拆解，对比新手答与高手答的深度差距">
+    
+    <link rel="canonical" href="https://onefly.top/learn-agent-interview/02-tool-management/">
+    <!-- Open Graph -->
+    <meta property="og:title" content="工具管理：参数校验、工具路由与百级工具库">
+    <meta property="og:description" content="Agent 工具管理面试题拆解，对比新手答与高手答的深度差距">
+    <meta property="og:url" content="https://onefly.top/learn-agent-interview/02-tool-management/">
+    <meta property="og:site_name" content="zero2Agent">
+    <meta property="og:type" content="article">
+    <meta property="og:locale" content="zh_CN">
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="工具管理：参数校验、工具路由与百级工具库">
+    <meta name="twitter:description" content="Agent 工具管理面试题拆解，对比新手答与高手答的深度差距">
+    <!-- JSON-LD structured data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Article",
+      "headline": "工具管理：参数校验、工具路由与百级工具库",
+      "description": "Agent 工具管理面试题拆解，对比新手答与高手答的深度差距",
+      "url": "https://onefly.top/learn-agent-interview/02-tool-management/",
+      "publisher": {
+        "@type": "Organization",
+        "name": "zero2Agent"
+      },
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://onefly.top/learn-agent-interview/02-tool-management/"
+      }
+    }
+    </script>
+    <script>
+        /* file: protocol only — for local _site preview */
+        (function () {
+            if (window.location.protocol !== "file:") return;
+            var path = window.location.pathname.replace(/\\/g, "/");
+            var marker = "/_site/";
+            var idx = path.lastIndexOf(marker);
+            if (idx < 0) return;
+            var relDir = path.slice(idx + marker.length).replace(/[^/]*$/, "");
+            var depth = relDir.split("/").filter(Boolean).length;
+            document.write('<base href="' + ("../".repeat(depth) || "./") + '">');
+        })();
+    </script>
+    <link rel="icon" type="image/svg+xml" href="/assets/images/logo.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Noto+Sans+SC:wght@400;500;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/css/docs.css?v=15">
+    <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <link id="hljs-theme" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <script>if(document.documentElement.getAttribute('data-theme')==='light'){document.getElementById('hljs-theme').href='https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css';}</script>
+    <!-- Mermaid: load + configure in <head> so it's ready before body scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@9.4.3/dist/mermaid.min.js"></script>
+    <script>
+        (function(){
+            var isLight = document.documentElement.getAttribute('data-theme') === 'light';
+            var darkVars = {
+                background: '#0a0a10', primaryColor: '#1a2535',
+                primaryTextColor: '#d1d5db', primaryBorderColor: '#334155',
+                lineColor: '#10b981', secondaryColor: '#161e2e',
+                tertiaryColor: '#161e2e', edgeLabelBackground: '#0d0d12',
+                clusterBkg: '#13131f'
+            };
+            var lightVars = {
+                background: '#ffffff', primaryColor: '#dbeafe',
+                primaryTextColor: '#1a1a2e', primaryBorderColor: '#93c5fd',
+                lineColor: '#059669', secondaryColor: '#f0fdf4',
+                tertiaryColor: '#ecfdf5', edgeLabelBackground: '#ffffff',
+                clusterBkg: '#f8fafc'
+            };
+            mermaid.initialize({
+                startOnLoad: false,
+                securityLevel: 'loose',
+                theme: isLight ? 'default' : 'dark',
+                themeVariables: Object.assign(isLight ? lightVars : darkVars, {
+                    fontFamily: '"Noto Sans SC", "Inter", sans-serif',
+                    fontSize: '14px'
+                }),
+                flowchart: { curve: 'basis', htmlLabels: false, padding: 16 },
+                sequence: {
+                    actorFontFamily: '"Noto Sans SC", sans-serif',
+                    messageFontFamily: '"Noto Sans SC", sans-serif',
+                },
+            });
+        })();
+    </script>
+</head>
+
+<body>
+    <div class="site-shell">
+        <header class="doc-header">
+            <div class="doc-header-inner">
+                <a href="/" class="brand">
+                    <img src="/assets/images/logo.svg" alt="Zero2Agent logo" class="brand-logo">
+                    <span class="brand-text">Zero2Agent</span>
+                </a>
+                <nav class="doc-nav">
+                    
+                    <a href="/learn-agent-basic/index.html"
+                       
+                       title="Agent Basic">
+                        Basic
+                    </a>
+                    
+                    <a href="/learn-langgraph/index.html"
+                       
+                       title="LangGraph">
+                        LangGraph
+                    </a>
+                    
+                    <a href="/learn-sdk-frameworks/index.html"
+                       
+                       title="SDK 框架">
+                        SDK
+                    </a>
+                    
+                    <a href="/learn-agent-survey/index.html"
+                       
+                       title="框架调研">
+                        Survey
+                    </a>
+                    
+                    <a href="/learn-openclaw/index.html"
+                       
+                       title="OpenClaw Agent">
+                        OpenClaw
+                    </a>
+                    
+                    <a href="/learn-claude-code/index.html"
+                       
+                       title="Claude Code">
+                        Claude Code
+                    </a>
+                    
+                    <a href="/learn-deepseek-harness/index.html"
+                       
+                       title="DeepSeek Harness">
+                        DSH
+                    </a>
+                    
+                    <a href="/learn-agent-training/index.html"
+                       
+                       title="Agent 训练实战">
+                        训练实战
+                    </a>
+                    
+                    <a href="/learn-agent-practice/index.html"
+                       
+                       title="Agent 应用实战">
+                        应用实战
+                    </a>
+                    
+                    <a href="/learn-pi/index.html"
+                       
+                       title="Pi Coding Agent">
+                        Pi
+                    </a>
+                    
+                    <a href="/learn-codex/index.html"
+                       
+                       title="OpenAI Codex CLI">
+                        Codex
+                    </a>
+                    
+                    <a href="/learn-agent-interview/index.html"
+                       class="is-active"
+                       title="Agent 面试通关">
+                        面试通关
+                    </a>
+                    
+                    <a href="/final-project/index.html"
+                       
+                       title="Final Project">
+                        Project
+                    </a>
+                    
+                    <div class="nav-dropdown">
+                        <button class="nav-dropdown-trigger" type="button">Zero 系列 ▾</button>
+                        <div class="nav-dropdown-menu">
+                            <a href="https://onefly.top/" target="_blank" rel="noopener">zero2Agent <span>AI Agent 工程</span></a>
+                            <a href="https://onefly.top/zero2Leetcode/" target="_blank" rel="noopener">zero2Leetcode <span>算法刷题</span></a>
+                            <a href="https://onefly.top/zero2PM/" target="_blank" rel="noopener">zero2PM <span>产品经理入门</span></a>
+                            <a href="https://onefly.top/zero2DA/" target="_blank" rel="noopener">zero2DA <span>数据分析入门</span></a>
+                        </div>
+                    </div>
+                </nav>
+                <div class="header-actions">
+                    <a class="github-star-btn" href="https://github.com/ranxi2001/zero2Agent" target="_blank" rel="noopener" aria-label="在 GitHub 为 zero2Agent 点 Star">
+                        <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 .7a11.5 11.5 0 0 0-3.64 22.41c.58.11.79-.25.79-.56v-2.22c-3.22.7-3.9-1.37-3.9-1.37-.53-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.71.08-.71 1.16.08 1.78 1.2 1.78 1.2 1.03 1.77 2.71 1.26 3.37.96.1-.75.4-1.26.73-1.55-2.57-.29-5.27-1.29-5.27-5.69 0-1.26.45-2.29 1.19-3.09-.12-.29-.52-1.47.11-3.05 0 0 .97-.31 3.16 1.18a10.94 10.94 0 0 1 5.76 0c2.19-1.49 3.16-1.18 3.16-1.18.63 1.58.23 2.76.11 3.05.74.8 1.19 1.83 1.19 3.09 0 4.41-2.71 5.39-5.29 5.68.42.36.79 1.06.79 2.14v3.16c0 .31.21.68.8.56A11.5 11.5 0 0 0 12 .7Z"/></svg>
+                        <span>Star</span>
+                        <span class="github-star-count" data-github-stars aria-label="GitHub Star 数量">—</span>
+                    </a>
+                    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="切换主题" title="切换主题">
+                        <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                        <svg class="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="doc-main">
+            <!-- Left: hierarchical navigation -->
+            <aside class="doc-sidebar">
+                <p class="sidebar-label">Learning Map</p>
+                
+                <div class="nav-module">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/learn-agent-basic/index.html"
+                           class="nav-module-link">
+                            Agent Basic
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/learn-agent-basic/01-what-is-an-agent/index.html"
+                           class="nav-article">
+                            什么是 Agent
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/02-workflow-vs-agent/index.html"
+                           class="nav-article">
+                            Workflow 和 Agent 的区别
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/03-core-components/index.html"
+                           class="nav-article">
+                            一个 Agent 系统的核心组成
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/04-why-agent-demos-break/index.html"
+                           class="nav-article">
+                            为什么很多 Agent Demo 一落地就不稳定
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/05-tool-calling-basics/index.html"
+                           class="nav-article">
+                            大模型 API 输入输出与 Tool Calling
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/06-memory-patterns/index.html"
+                           class="nav-article">
+                            Context、State 与 Memory
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/07-planning-reflection-rag/index.html"
+                           class="nav-article">
+                            Planning、Reflection、RAG 分别解决什么问题
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/08-single-vs-multi-agent/index.html"
+                           class="nav-article">
+                            单 Agent 和多 Agent 的边界
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/09-agent-infra/index.html"
+                           class="nav-article">
+                            Agent Infra：从 Harness 到生产环境
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/10-loop-engineering/index.html"
+                           class="nav-article">
+                            Loop Engineering：让 Agent 自主迭代直到正确
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/11-agent-evaluation/index.html"
+                           class="nav-article">
+                            Agent 评估：怎么知道你的 Agent 好不好
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/12-coding-agent-patterns/index.html"
+                           class="nav-article">
+                            Coding Agent：最成功的 Agent 落地形态
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/13-context-engineering/index.html"
+                           class="nav-article">
+                            Context Engineering：系统化设计模型输入
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/14-multimodal-realtime/index.html"
+                           class="nav-article">
+                            多模态与实时交互 Agent
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/15-agent-self-evolution/index.html"
+                           class="nav-article">
+                            Agent 自进化：不改权重也能持续变强
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/16-advanced-rag-memory/index.html"
+                           class="nav-article">
+                            高级 RAG 与记忆架构
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/17-async-event-driven/index.html"
+                           class="nav-article">
+                            异步 Agent 与事件驱动架构
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="nav-module">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/learn-langgraph/index.html"
+                           class="nav-module-link">
+                            LangGraph
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/learn-langgraph/01-what-is-langgraph/index.html"
+                           class="nav-article">
+                            LangGraph 是什么，为什么不用链式调用
+                        </a>
+                        
+                        
+                        <a href="/learn-langgraph/02-state-node-graph/index.html"
+                           class="nav-article">
+                            State、Node、Graph 三件套
+                        </a>
+                        
+                        
+                        <a href="/learn-langgraph/03-sequential-graph/index.html"
+                           class="nav-article">
+                            顺序图：第一个可运行的 Workflow
+                        </a>
+                        
+                        
+                        <a href="/learn-langgraph/04-conditional-edges/index.html"
+                           class="nav-article">
+                            条件分支：add_conditional_edges
+                        </a>
+                        
+                        
+                        <a href="/learn-langgraph/05-parallel-workflows/index.html"
+                           class="nav-article">
+                            并行执行：Fan-out / Fan-in
+                        </a>
+                        
+                        
+                        <a href="/learn-langgraph/06-prompt-chaining/index.html"
+                           class="nav-article">
+                            Prompt Chaining：分步生成
+                        </a>
+                        
+                        
+                        <a href="/learn-langgraph/07-llm-integration/index.html"
+                           class="nav-article">
+                            接入 LLM：OpenAI 与 HuggingFace
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="nav-module">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/learn-sdk-frameworks/index.html"
+                           class="nav-module-link">
+                            SDK 框架
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/learn-sdk-frameworks/01-openai-agents-sdk/index.html"
+                           class="nav-article">
+                            OpenAI Agents SDK：Agent、Tool、Handoff
+                        </a>
+                        
+                        
+                        <a href="/learn-sdk-frameworks/02-google-gemini-sdk/index.html"
+                           class="nav-article">
+                            Google genai SDK：Gemini + Vertex AI 多模型
+                        </a>
+                        
+                        
+                        <a href="/learn-sdk-frameworks/03-claude-anthropic-sdk/index.html"
+                           class="nav-article">
+                            Claude Anthropic SDK：Messages API 与 Tool Use
+                        </a>
+                        
+                        
+                        <a href="/learn-sdk-frameworks/04-sdk-comparison/index.html"
+                           class="nav-article">
+                            三大 SDK 横向对比：怎么选
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="nav-module">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/learn-agent-survey/index.html"
+                           class="nav-module-link">
+                            框架调研
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/learn-agent-survey/01-agentscope/index.html"
+                           class="nav-article">
+                            AgentScope：阿里的多 Agent 框架
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-survey/02-mastra/index.html"
+                           class="nav-article">
+                            Mastra：TypeScript 原生 Agent 框架
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-survey/03-semantic-kernel/index.html"
+                           class="nav-article">
+                            Semantic Kernel：微软的企业级 AI SDK
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-survey/04-eino/index.html"
+                           class="nav-article">
+                            Eino：字节跳动的 Go 语言 Agent 框架
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-survey/05-gitagent/index.html"
+                           class="nav-article">
+                            GitAgent：代码仓库智能操作
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-survey/06-harness/index.html"
+                           class="nav-article">
+                            手搓 Agent：从原理到实现
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-survey/07-agentuniverse/index.html"
+                           class="nav-article">
+                            AgentUniverse：华为的企业级 Agent 平台
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-survey/08-deerflow/index.html"
+                           class="nav-article">
+                            DeerFlow：字节跳动的 Deep Research 框架
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-survey/09-langchain/index.html"
+                           class="nav-article">
+                            LangChain：最流行的 LLM 框架
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-survey/10-google-adk/index.html"
+                           class="nav-article">
+                            Google ADK：官方 Agent 开发套件
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-survey/11-skills-claudecode/index.html"
+                           class="nav-article">
+                            Skills + Claude Code：模块化技能系统
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-survey/12-vercel-ai-sdk/index.html"
+                           class="nav-article">
+                            Vercel AI SDK：全栈 AI 应用框架
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-survey/13-autogen/index.html"
+                           class="nav-article">
+                            AutoGen：微软的多 Agent 对话框架
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="nav-module">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/learn-openclaw/index.html"
+                           class="nav-module-link">
+                            OpenClaw Agent
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/learn-openclaw/01-core-idea/index.html"
+                           class="nav-article">
+                            为什么要自己写 Agent
+                        </a>
+                        
+                        
+                        <a href="/learn-openclaw/02-node-to-agent/index.html"
+                           class="nav-article">
+                            Agent Loop：EventStream 核心循环
+                        </a>
+                        
+                        
+                        <a href="/learn-openclaw/03-rag/index.html"
+                           class="nav-article">
+                            RAG：检索增强工程实现
+                        </a>
+                        
+                        
+                        <a href="/learn-openclaw/04-tools/index.html"
+                           class="nav-article">
+                            工具系统：MCP 与并行执行
+                        </a>
+                        
+                        
+                        <a href="/learn-openclaw/05-memory/index.html"
+                           class="nav-article">
+                            Context Engine：记忆架构
+                        </a>
+                        
+                        
+                        <a href="/learn-openclaw/06-multi-agent/index.html"
+                           class="nav-article">
+                            Multi-Agent：隔离与路由
+                        </a>
+                        
+                        
+                        <a href="/learn-openclaw/07-pi-mono/index.html"
+                           class="nav-article">
+                            读懂 pi-mono 源码
+                        </a>
+                        
+                        
+                        <a href="/learn-openclaw/08-build-openclaw/index.html"
+                           class="nav-article">
+                            构建你的 OpenClaw
+                        </a>
+                        
+                        
+                        <a href="/learn-openclaw/09-interview/index.html"
+                           class="nav-article">
+                            面试与实习准备
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="nav-module">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/learn-claude-code/index.html"
+                           class="nav-module-link">
+                            Claude Code
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/learn-claude-code/01-agent-loop/index.html"
+                           class="nav-article">
+                            Agent Loop：一个循环就是一个 Agent
+                        </a>
+                        
+                        
+                        <a href="/learn-claude-code/02-tool-use/index.html"
+                           class="nav-article">
+                            Tool Use：扩展模型能触达的边界
+                        </a>
+                        
+                        
+                        <a href="/learn-claude-code/03-todo-write/index.html"
+                           class="nav-article">
+                            TodoWrite：让 Agent 不再迷路
+                        </a>
+                        
+                        
+                        <a href="/learn-claude-code/04-subagent/index.html"
+                           class="nav-article">
+                            Subagent：上下文隔离的正确姿势
+                        </a>
+                        
+                        
+                        <a href="/learn-claude-code/05-skill-loading/index.html"
+                           class="nav-article">
+                            Skill Loading：按需加载领域知识
+                        </a>
+                        
+                        
+                        <a href="/learn-claude-code/06-context-compact/index.html"
+                           class="nav-article">
+                            Context Compact：三层压缩换无限会话
+                        </a>
+                        
+                        
+                        <a href="/learn-claude-code/07-task-system/index.html"
+                           class="nav-article">
+                            Task System：持久化任务图
+                        </a>
+                        
+                        
+                        <a href="/learn-claude-code/08-background-tasks/index.html"
+                           class="nav-article">
+                            Background Tasks：非阻塞工具执行
+                        </a>
+                        
+                        
+                        <a href="/learn-claude-code/09-agent-teams/index.html"
+                           class="nav-article">
+                            Agent Teams：多 Agent 协作
+                        </a>
+                        
+                        
+                        <a href="/learn-claude-code/10-team-protocols/index.html"
+                           class="nav-article">
+                            Team Protocols：结构化通信协议
+                        </a>
+                        
+                        
+                        <a href="/learn-claude-code/11-autonomous-agents/index.html"
+                           class="nav-article">
+                            Autonomous Agents：自组织团队
+                        </a>
+                        
+                        
+                        <a href="/learn-claude-code/12-worktree-isolation/index.html"
+                           class="nav-article">
+                            Worktree 隔离：多 Agent 并行不踩踏
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="nav-module">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/learn-deepseek-harness/index.html"
+                           class="nav-module-link">
+                            DeepSeek Harness
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/learn-deepseek-harness/01-what-is-harness/index.html"
+                           class="nav-article">
+                            DeepSeek Harness：一切皆插件的 Agent 运行时
+                        </a>
+                        
+                        
+                        <a href="/learn-deepseek-harness/02-cordis-plugin-kernel/index.html"
+                           class="nav-article">
+                            声明式与命令式：Cordis 的五个核心概念
+                        </a>
+                        
+                        
+                        <a href="/learn-deepseek-harness/03-profile-bundle-patch/index.html"
+                           class="nav-article">
+                            运行中的 DSH：插件树、组合层与能力接缝
+                        </a>
+                        
+                        
+                        <a href="/learn-deepseek-harness/04-llm-seam/index.html"
+                           class="nav-article">
+                            LLM 接缝：把模型差异关在适配器里
+                        </a>
+                        
+                        
+                        <a href="/learn-deepseek-harness/05-agent-loop/index.html"
+                           class="nav-article">
+                            Agent Loop：控制平面如何推进任务
+                        </a>
+                        
+                        
+                        <a href="/learn-deepseek-harness/06-tool-pipeline/index.html"
+                           class="nav-article">
+                            Tool Pipeline：能力为什么不能直接等于权限
+                        </a>
+                        
+                        
+                        <a href="/learn-deepseek-harness/07-session-log/index.html"
+                           class="nav-article">
+                            Session Log：为什么日志就是事实源
+                        </a>
+                        
+                        
+                        <a href="/learn-deepseek-harness/08-inbox-control/index.html"
+                           class="nav-article">
+                            Inbox 控制：为什么用户插话必须有自己的语义
+                        </a>
+                        
+                        
+                        <a href="/learn-deepseek-harness/09-code-mode/index.html"
+                           class="nav-article">
+                            Code Mode：上下文压缩不等于安全隔离
+                        </a>
+                        
+                        
+                        <a href="/learn-deepseek-harness/10-context-compaction-cost/index.html"
+                           class="nav-article">
+                            Context Compaction：把上下文当作工作集管理
+                        </a>
+                        
+                        
+                        <a href="/learn-deepseek-harness/11-security-boundary/index.html"
+                           class="nav-article">
+                            安全边界：把信任放到模型之外
+                        </a>
+                        
+                        
+                        <a href="/learn-deepseek-harness/12-subagent-orchestration/index.html"
+                           class="nav-article">
+                            Subagent 编排：扩展能力而不是复制 Loop
+                        </a>
+                        
+                        
+                        <a href="/learn-deepseek-harness/13-runtime-surfaces/index.html"
+                           class="nav-article">
+                            Runtime Surfaces：一套运行时如何服务多个宿主
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="nav-module">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/learn-agent-training/index.html"
+                           class="nav-module-link">
+                            Agent 训练实战
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/learn-agent-training/01-agent-sft/index.html"
+                           class="nav-article">
+                            Agent SFT 关键细节：从轨迹数据到 Loss Mask
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-training/02-agent-rl/index.html"
+                           class="nav-article">
+                            Agent RL 实战：用强化学习提升推理与决策质量
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-training/03-grpo-vs-ppo/index.html"
+                           class="nav-article">
+                            GRPO vs PPO：Agent 强化学习算法深度对比与选型
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-training/04-data-mix/index.html"
+                           class="nav-article">
+                            训练数据配比实战：Agent 不只吃轨迹数据
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-training/05-agent-eval/index.html"
+                           class="nav-article">
+                            Agent 评测：怎么衡量训练效果
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-training/06-train-to-deploy/index.html"
+                           class="nav-article">
+                            从 SFT 到部署：Agent 模型上线全流程
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-training/07-training-environment-engineering/index.html"
+                           class="nav-article">
+                            Agent 训练环境工程：从仿真沙箱到数据回流闭环
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="nav-module">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/learn-agent-practice/index.html"
+                           class="nav-module-link">
+                            Agent 应用实战
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/learn-agent-practice/01-vibe-coding-homepage/index.html"
+                           class="nav-article">
+                            从 0 开始 Vibe Coding：用 Codex 发布个人主页
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-practice/02-ai-coding-interview/index.html"
+                           class="nav-article">
+                            AI Coding 面试：解题流程与交付策略
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-practice/03-daily-dev-workflow/index.html"
+                           class="nav-article">
+                            日常开发中的 Agent 工作流
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-practice/04-auto-harness/index.html"
+                           class="nav-article">
+                            Auto Harness 迭代实战
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-practice/05-eval-driven-practice/index.html"
+                           class="nav-article">
+                            Eval-Driven Agent Practice：用评估驱动 Agent 工作流迭代
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="nav-module">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/learn-pi/index.html"
+                           class="nav-module-link">
+                            Pi Coding Agent
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/learn-pi/01-what-is-pi/index.html"
+                           class="nav-article">
+                            Pi 是什么：定位、架构与 Agent Loop
+                        </a>
+                        
+                        
+                        <a href="/learn-pi/02-pi-ai-provider/index.html"
+                           class="nav-article">
+                            pi-ai：统一多 Provider 的适配层设计
+                        </a>
+                        
+                        
+                        <a href="/learn-pi/03-extension-system/index.html"
+                           class="nav-article">
+                            扩展体系：Skill、Extension 与 Package
+                        </a>
+                        
+                        
+                        <a href="/learn-pi/04-mcp-adapter/index.html"
+                           class="nav-article">
+                            Pi 为什么不内置 MCP：Adapter 与 Token 取舍
+                        </a>
+                        
+                        
+                        <a href="/learn-pi/05-security-model/index.html"
+                           class="nav-article">
+                            安全模型：Project Trust、权限门禁与系统隔离
+                        </a>
+                        
+                        
+                        <a href="/learn-pi/06-ecosystem/index.html"
+                           class="nav-article">
+                            生态使用：发现、审计与退出策略
+                        </a>
+                        
+                        
+                        <a href="/learn-pi/07-comparison/index.html"
+                           class="nav-article">
+                            Pi vs Claude Code vs DSH：按约束选择 Harness
+                        </a>
+                        
+                        
+                        <a href="/learn-pi/08-session-runtime/index.html"
+                           class="nav-article">
+                            Session Runtime：树形历史、恢复与 Compaction
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="nav-module">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/learn-codex/index.html"
+                           class="nav-module-link">
+                            OpenAI Codex CLI
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/learn-codex/01-what-is-codex/index.html"
+                           class="nav-article">
+                            Codex CLI 是什么：定位、架构与 Agent Loop
+                        </a>
+                        
+                        
+                        <a href="/learn-codex/02-config-permission/index.html"
+                           class="nav-article">
+                            配置与权限系统：TOML 层级与三种审批策略
+                        </a>
+                        
+                        
+                        <a href="/learn-codex/03-sandbox-security/index.html"
+                           class="nav-article">
+                            沙箱与安全模型：平台原生隔离的工程边界
+                        </a>
+                        
+                        
+                        <a href="/learn-codex/04-mcp-integration/index.html"
+                           class="nav-article">
+                            MCP 深度集成：工具协议与审批边界
+                        </a>
+                        
+                        
+                        <a href="/learn-codex/05-codex-sdk/index.html"
+                           class="nav-article">
+                            Codex SDK：Thread-based 编程式 Agent 接口
+                        </a>
+                        
+                        
+                        <a href="/learn-codex/06-developer-experience/index.html"
+                           class="nav-article">
+                            开发者体验与生态评估
+                        </a>
+                        
+                        
+                        <a href="/learn-codex/07-codex-vs-claude-code/index.html"
+                           class="nav-article">
+                            Codex vs Claude Code vs DSH
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="nav-module is-open">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/learn-agent-interview/index.html"
+                           class="nav-module-link is-active">
+                            Agent 面试通关
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/learn-agent-interview/01-architecture-design/index.html"
+                           class="nav-article">
+                            架构选型
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/02-tool-management/index.html"
+                           class="nav-article is-current">
+                            工具管理
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/03-fault-tolerance/index.html"
+                           class="nav-article">
+                            容错与鲁棒性
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/04-memory-context/index.html"
+                           class="nav-article">
+                            记忆与上下文
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/05-eval-and-vision/index.html"
+                           class="nav-article">
+                            评估与全局观
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/06-multi-agent-collab/index.html"
+                           class="nav-article">
+                            多智能体协作
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/07-engineering-pitfalls/index.html"
+                           class="nav-article">
+                            工程化踩坑
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/08-prompt-engineering/index.html"
+                           class="nav-article">
+                            Prompt 工程与框架原理
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/09-rag-retrieval/index.html"
+                           class="nav-article">
+                            RAG 与检索系统
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/10-training-and-data/index.html"
+                           class="nav-article">
+                            训练、数据与模型优化
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/11-ai-code-testing/index.html"
+                           class="nav-article">
+                            AI 代码分析与测试
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/12-business-ai-engineering/index.html"
+                           class="nav-article">
+                            业务 AI 工程分析
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/13-project-deep-dive/index.html"
+                           class="nav-article">
+                            简历项目拷打
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/14-company-preferences/index.html"
+                           class="nav-article">
+                            各公司面试偏好
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/15-agent-concepts/index.html"
+                           class="nav-article">
+                            概念考察
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="nav-module">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/final-project/index.html"
+                           class="nav-module-link">
+                            Final Project
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/final-project/01-prd/index.html"
+                           class="nav-article">
+                            PRD：产品需求文档
+                        </a>
+                        
+                        
+                        <a href="/final-project/02-architecture/index.html"
+                           class="nav-article">
+                            系统架构设计
+                        </a>
+                        
+                        
+                        <a href="/final-project/03-query-engine/index.html"
+                           class="nav-article">
+                            Query Engine 实现
+                        </a>
+                        
+                        
+                        <a href="/final-project/04-tools-skills/index.html"
+                           class="nav-article">
+                            Tools & Skills 实现
+                        </a>
+                        
+                        
+                        <a href="/final-project/05-knowledge-base/index.html"
+                           class="nav-article">
+                            知识库构建
+                        </a>
+                        
+                        
+                        <a href="/final-project/06-context-memory/index.html"
+                           class="nav-article">
+                            Context & Memory
+                        </a>
+                        
+                        
+                        <a href="/final-project/07-permission-session/index.html"
+                           class="nav-article">
+                            Permission & Session
+                        </a>
+                        
+                        
+                        <a href="/final-project/08-hook-command/index.html"
+                           class="nav-article">
+                            Hook & Command
+                        </a>
+                        
+                        
+                        <a href="/final-project/09-sub-agent/index.html"
+                           class="nav-article">
+                            Sub-agent 编排
+                        </a>
+                        
+                        
+                        <a href="/final-project/10-stt-speech/index.html"
+                           class="nav-article">
+                            STT 集成与语音分析
+                        </a>
+                        
+                        
+                        <a href="/final-project/11-deploy-demo/index.html"
+                           class="nav-article">
+                            部署与演示
+                        </a>
+                        
+                        
+                        <a href="/final-project/12-web-ui/index.html"
+                           class="nav-article">
+                            Web UI 交互设计
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+            </aside>
+
+            <!-- Center: article content -->
+            <article class="doc-article">
+                
+                <p class="doc-eyebrow">Agent 面试通关 / 02</p>
+                
+                <h1 id="工具管理参数校验工具路由与百级工具库">工具管理：参数校验、工具路由与百级工具库</h1>
+
+<p>工具调用是 Agent 区别于普通对话模型的核心能力。面试官在这个维度考的不是“你知不知道 function calling”，而是<strong>“模型不听话怎么办”和“工具多了怎么管”</strong>——这两个问题决定了你的 Agent 能不能上生产。</p>
+
+<hr />
+
+<h2 id="参数校验与工具路由">参数校验与工具路由</h2>
+
+<h3 id="q工具描述写得再好模型也瞎传参数怎么办">Q：工具描述写得再好，模型也瞎传参数怎么办？</h3>
+
+<blockquote>
+  <p>来源：腾讯 Agent 岗终面</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“加强 Prompt，让模型输出 JSON。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>三层防线：</p>
+
+<ol>
+  <li><strong>Schema 里写“负面描述”</strong>：比如“城市名参数，请直接使用用户输入文本，切勿从地址中自行解析提取”。告诉模型不该做什么，比告诉它该做什么更有效。</li>
+  <li><strong>输出后做硬校验</strong>：用 Pydantic 模型校验，类型不对、枚举值不匹配的直接拒掉，让模型重试。</li>
+  <li><strong>关键参数业务兜底</strong>：比如查询订单的工具，模型传回的 <code class="language-plaintext highlighter-rouge">order_id</code>，必须先调用一次“订单是否存在”的校验接口。绝不让未经核实的 ID 直接下发给数据库。</li>
+</ol>
+
+<p><strong>差距在哪</strong>：新手的答案停留在 Prompt 层面——这是最弱的防线，模型不一定听。高手的三层防线是递进的：Prompt 引导 → 格式硬校验 → 业务逻辑兜底。即使模型完全不听话，后两层也能拦住。面试官考的是“你有没有做过需要防御性编程的系统”。</p>
+
+<p><strong>追问：模型调用工具出现参数幻觉或语法错误时，有哪些自动化修正手段？</strong></p>
+
+<blockquote>
+  <p>来源：蚂蚁 AI应用开发 二面</p>
+</blockquote>
+
+<p>参数幻觉（模型编造不存在的参数值）和语法错误（JSON 格式错误、类型不匹配）是工具调用最常见的两类失败。自动化修正手段分三个层次：</p>
+
+<p><strong>1. 格式层自动修复</strong>：JSON 语法错误可以用规则修复——缺少引号、多余逗号、未闭合括号等常见错误有明确的修复规则。不需要模型参与，纯代码处理。</p>
+
+<p><strong>2. 语义层重试</strong>：参数值不合法时（如枚举值不在范围内、日期格式错误），将错误信息拼接到 Prompt 中让模型重新生成参数。关键是错误信息要具体——不是“参数错误”，而是“city 参数值‘北京市’不在合法列表中，合法值为：beijing, shanghai, …”。</p>
+
+<p><strong>3. 降级策略</strong>：重试 1-2 次仍失败时，不继续重试（避免 token 浪费），而是降级处理——用默认参数、跳过该工具、或转人工。降级比无限重试更符合生产需求。</p>
+
+<hr />
+
+<h3 id="q你们工具库有上百个工具怎么让模型快速选对">Q：你们工具库有上百个工具，怎么让模型快速选对？</h3>
+
+<blockquote>
+  <p>来源：腾讯 Agent 岗终面</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“把所有工具描述发给模型让它选。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>不可能全发，上下文不够，且会干扰。我们做了个<strong>轻量级工具路由层</strong>：</p>
+
+<ol>
+  <li>用户请求来时，先用 FastText 之类的小模型快速提取意图关键词</li>
+  <li>用关键词去工具向量库做语义检索，召回 top 5</li>
+  <li>最关键的一步：用一个精调过的 7B 小模型，给这 5 个工具的相关性做精排序，只把 <strong>top 2</strong> 工具的完整 schema 交给大模型做最终调用</li>
+</ol>
+
+<p>这个流程让工具选择准确率从 ~70% 提到了 95%+。</p>
+
+<p><strong>候选工具超过 100 个时的召回偏差问题</strong>：</p>
+
+<p>当工具规模达到百级以上，纯语义检索会出现<strong>召回偏差</strong>——高频工具的描述被模型见过更多次，embedding 和 query 的匹配度天然更高，导致低频但正确的工具被排挤。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>偏差类型</th>
+      <th>表现</th>
+      <th>解决方案</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>高频偏差</td>
+      <td>常用工具总是排在前面，冷门工具几乎不被召回</td>
+      <td>对工具 embedding 做频率逆加权，降低高频工具的匹配分</td>
+    </tr>
+    <tr>
+      <td>描述偏差</td>
+      <td>描述写得好的工具比描述差的更容易被选中</td>
+      <td>统一工具描述模板，确保描述质量一致</td>
+    </tr>
+    <tr>
+      <td>语义模糊偏差</td>
+      <td>多个工具描述相似，模型分不清选哪个</td>
+      <td>在描述中加“反面说明”——“本工具不用于XX场景”</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>更根本的解法是<strong>分层路由</strong>——不让模型在 100 个工具中直接选，而是先分类再选：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>第一层：意图分类器 → 5-8 个工具大类（检索/操作/分析/通信...）
+第二层：大类内语义检索 → 每类 10-15 个工具中选 top-3
+第三层：最终选择 → 模型从 3 个候选中选
+</code></pre></div></div>
+
+<p>每层缩小 5-10 倍，三层下来从 100+ 缩到 3，大幅降低选错概率。</p>
+
+<p><strong>差距在哪</strong>：新手的方案在工具超过 20 个时就会崩——上下文被工具描述占满，模型反而选不好。高手的回答展示了一个完整的召回-排序管线（和搜索引擎的架构一样），每一层都有明确的职责。面试官考的是“你能不能把 Agent 的子问题抽象成一个工程问题来解决”。</p>
+
+<hr />
+
+<h3 id="q多工具场景下的调度策略">Q：多工具场景下的调度策略？</h3>
+
+<blockquote>
+  <p>来源：阿里 AI Agent 开发一面</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“模型自己选。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>多工具场景的核心问题是<strong>选哪个、按什么顺序、并行还是串行</strong>。</p>
+
+<ol>
+  <li><strong>意图路由前置</strong>：用户请求先经过轻量分类器或规则，判断需要哪类工具，不让大模型在全量工具里大海捞针</li>
+  <li><strong>依赖分析决定编排</strong>：分析工具之间的输入输出依赖关系——无依赖的并行执行，有依赖的串行编排，减少总耗时</li>
+  <li><strong>优先级与降级</strong>：多个工具都能用时，按可靠性、延迟、成本排优先级；主工具超时自动降级到备选</li>
+  <li><strong>结果合并与冲突处理</strong>：多工具返回结果可能矛盾，需要合并策略——取最新的、取置信度最高的、或让模型做最终判断</li>
+</ol>
+
+<p>调度策略不是模型能力问题，是<strong>工程编排问题</strong>——模型负责决策“做什么”，编排层负责“怎么执行”。</p>
+
+<p><strong>差距在哪</strong>：新手把调度交给模型“自己想办法”。高手的回答把多工具调度拆成四个环节：路由、编排、降级、合并——每个环节都有明确策略。面试官考的是你能不能把多工具协作从“模型自己选”变成一个可控的工程流程。</p>
+
+<hr />
+
+<h2 id="工具返回与中间层">工具返回与中间层</h2>
+
+<h3 id="qmock-是怎么实现的在自动化生成测试的场景下">Q：Mock 是怎么实现的？在自动化生成测试的场景下</h3>
+
+<blockquote>
+  <p>来源：抖音基础架构 Agent 一面</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“用 <code class="language-plaintext highlighter-rouge">unittest.mock</code> 替换依赖。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>Mock 的实现分三步：<strong>识别依赖 → 生成 Mock 对象 → 注入测试</strong>。</p>
+
+<p><strong>第一步：识别需要 Mock 的依赖</strong></p>
+
+<p>从 AST 和 import 分析中提取外部调用——数据库连接、HTTP 请求、文件 I/O、第三方 SDK 调用。判断标准是：<strong>这个依赖在测试环境里能不能正常运行</strong>。能运行的不 Mock，不能运行的才 Mock。</p>
+
+<p><strong>第二步：生成 Mock 对象</strong></p>
+
+<p>根据依赖的接口签名生成 Mock：</p>
+<ul>
+  <li>函数调用：Mock 返回值，类型和实际返回一致</li>
+  <li>类实例：Mock 整个类，保留方法签名，返回值用合理的默认值</li>
+  <li>异步调用：生成 <code class="language-plaintext highlighter-rouge">AsyncMock</code>，保持 <code class="language-plaintext highlighter-rouge">await</code> 语义</li>
+</ul>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># 自动生成的 Mock 示例
+</span><span class="nd">@patch</span><span class="p">(</span><span class="sh">'</span><span class="s">module.db_client.query</span><span class="sh">'</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">test_get_user</span><span class="p">(</span><span class="n">mock_query</span><span class="p">):</span>
+    <span class="n">mock_query</span><span class="p">.</span><span class="n">return_value</span> <span class="o">=</span> <span class="p">{</span><span class="sh">"</span><span class="s">id</span><span class="sh">"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="sh">"</span><span class="s">name</span><span class="sh">"</span><span class="p">:</span> <span class="sh">"</span><span class="s">test</span><span class="sh">"</span><span class="p">}</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="nf">get_user</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">result</span><span class="p">[</span><span class="sh">"</span><span class="s">name</span><span class="sh">"</span><span class="p">]</span> <span class="o">==</span> <span class="sh">"</span><span class="s">test</span><span class="sh">"</span>
+    <span class="n">mock_query</span><span class="p">.</span><span class="nf">assert_called_once_with</span><span class="p">(</span><span class="n">user_id</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p><strong>第三步：注入策略</strong></p>
+
+<p>不同语言注入方式不同——Python 用 <code class="language-plaintext highlighter-rouge">@patch</code> 装饰器或 <code class="language-plaintext highlighter-rouge">with</code> 语句，Java 用依赖注入框架（Mockito），JavaScript 用 <code class="language-plaintext highlighter-rouge">jest.mock</code>。关键是 Mock 的粒度：Mock 太多会让测试脱离真实行为，Mock 太少会因为环境依赖跑不起来。</p>
+
+<p><strong>差距在哪</strong>：新手只知道用 Mock 库替换依赖。高手的回答展示了自动化场景下的完整 Mock 生成流程——先识别、再生成、再注入——且点出了 Mock 粒度的核心取舍。面试官考的不是你会不会用 Mock 库，而是你能不能让 Agent 自动决定“Mock 什么、怎么 Mock”。</p>
+
+<hr />
+
+<h3 id="q如果工具调用是成功的但返回结果语义不完整模型很容易误判你怎么设计中间层">Q：如果工具调用是成功的，但返回结果语义不完整，模型很容易误判，你怎么设计中间层？</h3>
+
+<blockquote>
+  <p>来源：腾讯大模型应用开发二面</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“让模型自己判断返回值是否完整。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>这个问题非常常见。很多工具从接口层面看是 200 成功，但业务语义上其实不够用——比如只返回了一个 code 没有返回解释信息，或者字段含义不清，模型会自行脑补。</p>
+
+<p>解决方式是加一个 <strong>tool adapter 或 semantic wrapper</strong>，把原始结果转成统一、可解释的中间表示：</p>
+
+<ol>
+  <li><strong>字段补全</strong>：缺失字段用默认值或“未知”显式标注，而不是让模型猜</li>
+  <li><strong>错误翻译</strong>：把错误码转成自然语言描述，比如 <code class="language-plaintext highlighter-rouge">code: 404</code> → <code class="language-plaintext highlighter-rouge">"未找到对应记录"</code></li>
+  <li><strong>单位归一</strong>：统一数据格式，比如日期统一成 ISO 格式、金额统一带币种</li>
+  <li><strong>空值处理和置信度标注</strong>：区分“查了没有”和“没查到”，标注数据可信度</li>
+</ol>
+
+<p>核心原则：<strong>不要把外部 API 的脏数据直接回喂给模型</strong>。中间层先清洗，让模型看到的是“可推理对象”，而不是原始接口垃圾。</p>
+
+<p><strong>差距在哪</strong>：新手让模型自己判断——模型没有业务语义知识，判断不了。高手在工具和模型之间加了一个 semantic wrapper 层，做字段补全、错误翻译、单位归一和置信度标注。面试官考的是你有没有意识到“工具调用成功 ≠ 结果可用”，以及怎么在中间层做数据治理。</p>
+
+<p><strong>追问：外部工具返回的数据格式和 Agent 期望的不匹配，怎么做自动映射？</strong></p>
+
+<blockquote>
+  <p>来源：淘天 AI Agent 二面</p>
+</blockquote>
+
+<p>这在接入第三方 API 时非常常见——天气 API 返回 <code class="language-plaintext highlighter-rouge">temp_f</code>（华氏度），Agent 期望 <code class="language-plaintext highlighter-rouge">temperature_celsius</code>（摄氏度）；电商 API 返回嵌套 JSON，Agent 期望扁平 key-value。</p>
+
+<p><strong>三层映射方案</strong>：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>层次</th>
+      <th>处理内容</th>
+      <th>实现方式</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>结构映射</td>
+      <td>字段重命名、嵌套展平、数组提取</td>
+      <td>JSONPath / JMESPath 表达式</td>
+    </tr>
+    <tr>
+      <td>类型转换</td>
+      <td>单位换算、日期格式、枚举值映射</td>
+      <td>预定义转换函数库</td>
+    </tr>
+    <tr>
+      <td>语义补全</td>
+      <td>补充缺失字段、添加业务含义注释</td>
+      <td>模板填充 + 默认值规则</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>追问：MCP 接入多个测评工具，同一问题返回格式不统一，怎么处理？</strong></p>
+
+<blockquote>
+  <p>来源：阿里淘天 AI应用开发一面</p>
+</blockquote>
+
+<p>MCP 接多工具后，同一个“代码质量评测”请求，SonarQube 返回 JSON、ESLint 返回文本列表、Pylint 返回 CSV 格式——格式不统一模型根本无法做交叉对比。</p>
+
+<p><strong>解决方案是在 MCP Server 内部做标准化输出层</strong>：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>层级</th>
+      <th>做什么</th>
+      <th>示例</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>格式归一</td>
+      <td>所有工具输出统一为同一 JSON Schema</td>
+      <td><code class="language-plaintext highlighter-rouge">{tool, severity, message, location}</code></td>
+    </tr>
+    <tr>
+      <td>语义对齐</td>
+      <td>不同工具的等级/标签映射到统一枚举</td>
+      <td>SonarQube “BLOCKER” = ESLint “error” = “严重”</td>
+    </tr>
+    <tr>
+      <td>结果聚合</td>
+      <td>多工具结果合并去重后再返回 Agent</td>
+      <td>相同位置的相同问题只保留一条</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>核心原则：<strong>格式统一是 MCP Server 的职责，不是模型的职责</strong>——让模型去理解三种不同格式是浪费 token 且不可靠。</p>
+
+<p><strong>工程实现——Schema 适配器模式</strong>：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>工具注册时定义两份 Schema：
+  raw_schema：工具实际返回的原始格式
+  agent_schema：Agent 期望的标准格式
+
+映射规则（声明式配置，不写代码）：
+  {
+    “temperature_celsius”: “$.main.temp_f | fahrenheit_to_celsius”,
+    “city_name”: “$.name”,
+    “wind_speed_mps”: “$.wind.speed | mph_to_mps”,
+    “description”: “$.weather[0].description”
+  }
+</code></pre></div></div>
+
+<p>声明式配置的好处是<strong>新增工具不需要写代码</strong>——只需要写一份映射规则。转换函数（如 <code class="language-plaintext highlighter-rouge">fahrenheit_to_celsius</code>）是预置的可复用单元。</p>
+
+<p>当映射规则覆盖不了的复杂情况（如返回格式不固定），才降级到用 LLM 做动态格式转换——但这会引入延迟和不确定性，只作为兜底方案。</p>
+
+<hr />
+
+<h3 id="q工具多导致-token-数过多怎么解决">Q：工具多导致 token 数过多，怎么解决？</h3>
+
+<blockquote>
+  <p>来源：字节 Agent 实习二面 【阿里国际一面追问：Skill描述过长导致上下文爆炸】【小红书 Agent 岗一面追问：工具延迟加载的触发时机与具体实现】</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“减少工具数量。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>砍工具是下策——工具是 Agent 的能力，砍多了能力就残了。核心思路是<strong>让模型在每次调用时只看到需要的工具，而不是全量工具</strong>。</p>
+
+<p><strong>1. 动态工具加载</strong>：</p>
+
+<ul>
+  <li>不把所有工具的 schema 一次性塞进 system prompt</li>
+  <li>根据用户当前意图，只加载相关工具。比如用户在问天气，就只加载天气/地理类工具，不加载数据库/文件操作类工具</li>
+  <li>意图识别可以用轻量分类器或关键词规则，成本极低</li>
+</ul>
+
+<p><strong>2. 工具描述压缩</strong>：</p>
+
+<ul>
+  <li>很多工具描述写得太冗长——把 200 字的描述压缩到 50 字以内，只保留“这个工具做什么”和“关键参数”</li>
+  <li>参数的详细约束放在二级描述中，模型选中工具后再加载完整 schema</li>
+</ul>
+
+<p><strong>3. 分层工具组织</strong>：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>第一层：工具大类（5-8 个）
+  → 信息查询类 / 数据操作类 / 文件处理类 / 通信类 / ...
+
+第二层：具体工具（每类 5-10 个）
+  → 天气查询 / 股票查询 / 地图搜索 / ...
+</code></pre></div></div>
+
+<p>模型先选大类，再在大类下选具体工具。两次选择的 token 开销远小于一次展示全量工具。</p>
+
+<p><strong>4. 工具向量检索</strong>（已有工具百级以上时）：</p>
+
+<ul>
+  <li>用户 query 做 embedding，和工具描述做语义匹配，只召回 top 3-5 的工具</li>
+  <li>这就是把“工具选择”变成了一个“检索”问题</li>
+</ul>
+
+<p><strong>什么时候触发延迟加载</strong>：</p>
+
+<p>延迟加载不是等模型已经生成了一个不存在的工具名再补救。更稳的触发点有两级：</p>
+
+<ol>
+  <li><strong>模型调用前</strong>：意图路由器根据当前用户请求、任务阶段和已有 plan 召回候选工具，只把候选工具的摘要或 schema 注入本轮请求。</li>
+  <li><strong>模型选中能力后</strong>：若第一层只披露了工具类别或 Skill 摘要，编排器再加载完整说明、参数 schema、权限和示例，随后重新发起受约束的决策轮。</li>
+</ol>
+
+<p>工具注册表保存名称、版本、能力标签、embedding、schema URI、权限和健康状态；路由结果还要经过租户权限与可用性过滤。缓存可以减少重复加载，但缓存键必须包含工具版本和权限作用域，避免把旧 schema 或其他用户可见的工具带入当前会话。</p>
+
+<p><strong>差距在哪</strong>：新手只会说“动态加载”，但没有交代加载发生在哪一轮、谁负责路由、完整 schema 从哪里取以及权限如何过滤。高手能把渐进式披露落实为注册表、两级触发、版本化缓存和受控重决策。</p>
+
+<hr />
+
+<h2 id="mcp-与-function-calling">MCP 与 Function Calling</h2>
+
+<h3 id="qmcp-server-是怎么构建的">Q：MCP Server 是怎么构建的？</h3>
+
+<blockquote>
+  <p>来源：字节 Agent 实习二面</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“就是写个 API 接口。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>MCP（Model Context Protocol）是 Anthropic 提出的<strong>模型与外部工具/数据源的标准化通信协议</strong>，目标是让 Agent 以统一的方式调用不同工具，不需要为每个工具写专门的适配代码。</p>
+
+<p><strong>MCP Server 的核心职责</strong>是：把外部能力（API、数据库、文件系统等）封装成符合 MCP 协议的标准工具，供 Agent 调用。</p>
+
+<p><strong>构建一个 MCP Server 的关键步骤</strong>：</p>
+
+<ol>
+  <li><strong>定义 Tool Schema</strong>：
+    <ul>
+      <li>每个工具需要声明名称、描述、输入参数（JSON Schema）和输出格式</li>
+      <li>描述要写给模型看——清晰说明“什么时候该用这个工具”和“参数怎么填”</li>
+    </ul>
+  </li>
+  <li><strong>实现 Handler</strong>：
+    <ul>
+      <li>每个工具对应一个 handler 函数，接收标准化的参数，执行实际操作，返回标准化的结果</li>
+      <li>Handler 内部做参数校验、错误处理、超时控制</li>
+    </ul>
+  </li>
+  <li><strong>选择传输方式</strong>：
+    <ul>
+      <li><strong>stdio</strong>：通过标准输入输出通信，适合本地工具（如文件操作、命令行工具）</li>
+      <li><strong>HTTP/SSE</strong>：通过 HTTP 请求 + Server-Sent Events 通信，适合远程服务</li>
+      <li>本地开发用 stdio 简单快速，生产部署用 HTTP/SSE 做服务化</li>
+    </ul>
+  </li>
+  <li><strong>注册与发现</strong>：
+    <ul>
+      <li>Client 端（Agent）通过配置或服务发现机制找到 MCP Server</li>
+      <li>Server 启动时声明自己提供的工具列表，Client 按需选择</li>
+    </ul>
+  </li>
+</ol>
+
+<p><strong>和直接写 API 的区别</strong>：</p>
+
+<ul>
+  <li>普通 API：每个工具一套接口定义、一套调用方式、一套错误处理</li>
+  <li>MCP：所有工具统一协议，Agent 不需要知道底层是 REST 还是 gRPC 还是本地调用——只需要知道 tool name 和参数</li>
+</ul>
+
+<p><strong>差距在哪</strong>：新手把 MCP 等同于“写 API”。高手理解 MCP 是一个协议层抽象——统一了工具发现、参数定义、调用方式和错误处理，让 Agent 能以即插即用的方式扩展能力。面试官考的是你对 Agent 工具生态标准化趋势的理解。</p>
+
+<hr />
+
+<h3 id="q大厂开源的-cli-工具如-lark-cli和-mcp-有什么区别它们跟直接调-api-又有什么不同">Q：大厂开源的 CLI 工具（如 lark-cli）和 MCP 有什么区别？它们跟直接调 API 又有什么不同？</h3>
+
+<blockquote>
+  <p>来源：大厂 Agent 面试高频题</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“CLI 就是命令行工具，MCP 就是协议，API 就是接口，三个不同的东西。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>这三者解决的问题不同，服务的“用户”也不同：</p>
+
+<p><strong>1. API——给程序用的原始接口</strong></p>
+
+<p>API 是最底层的能力暴露方式。比如飞书开放平台的 REST API，你要自己处理鉴权、拼参数、解析响应、处理错误码。它的“用户”是开发者写的代码。</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>开发者代码 → HTTP 请求 → 飞书 API → 响应 JSON
+</code></pre></div></div>
+
+<p><strong>2. CLI 工具——大厂跟进 Agent 生态的抢位之作</strong></p>
+
+<p>关键背景：lark-cli、coze-cli 这批大厂 CLI 工具集中涌现，不是偶然——它们是 MCP 和 Agent 生态爆火之后，各平台为了<strong>抢占 Agent 工具生态入口</strong>而快速推出的。</p>
+
+<p>CLI 本质上是 <strong>machine-friendly</strong> 的接口形态。和 GUI（人类友好）不同，CLI 天然适合被程序和 Agent 调用——结构化的输入输出、可脚本化、可管道组合。大厂推 CLI 而不是只提供 API，是因为 CLI 降低了 Agent 接入的门槛：不用写 SDK 集成代码，直接 <code class="language-plaintext highlighter-rouge">lark-cli send --chat "xxx" --text "hello"</code> 就能调用。</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Agent / 脚本 → lark-cli send --chat "xxx" --text "hello"
+                    ↓ 内部封装鉴权、参数、错误处理
+               飞书 API 调用 → 结构化输出
+</code></pre></div></div>
+
+<p>但 CLI 的局限很明显：<strong>每个平台一套 CLI，Agent 需要为每个平台学一套命令</strong>。</p>
+
+<p><strong>3. MCP——Agent 工具调用的统一协议</strong></p>
+
+<p>MCP 解决的是 CLI 解决不了的问题：<strong>标准化</strong>。它不是封装某一个平台的 API，而是定义了 Agent 发现和调用任意工具的统一协议。不管底层是飞书 API、数据库还是本地文件系统，Agent 只需要按 MCP 协议交互。</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Agent → MCP 协议 → MCP Server A（封装飞书能力）
+                  → MCP Server B（封装数据库）
+                  → MCP Server C（封装本地文件系统）
+</code></pre></div></div>
+
+<p>MCP 的价值在于：Agent 不需要知道底层是 REST、gRPC 还是 CLI——<strong>一套协议打通所有工具</strong>。</p>
+
+<p><strong>那大厂为什么不直接做 MCP Server，还要出 CLI？</strong></p>
+
+<p>因为 CLI 是<strong>更低成本的试水方式</strong>：不需要实现完整的 MCP 协议栈，先用 CLI 把平台能力暴露给 Agent 生态，抢个身位。而且 CLI 可以被 MCP Server 二次封装——社区已经有大量“CLI → MCP Server”的适配层了。</p>
+
+<p><strong>核心区别总结</strong>：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>维度</th>
+      <th>API</th>
+      <th>CLI 工具</th>
+      <th>MCP</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>服务对象</td>
+      <td>程序代码</td>
+      <td>Agent / 脚本（machine-friendly）</td>
+      <td>AI Agent（协议级）</td>
+    </tr>
+    <tr>
+      <td>设计动机</td>
+      <td>开放平台能力</td>
+      <td>抢占 Agent 工具生态入口</td>
+      <td>统一 Agent 工具标准</td>
+    </tr>
+    <tr>
+      <td>抽象层级</td>
+      <td>原始接口</td>
+      <td>平台级封装</td>
+      <td>协议级抽象</td>
+    </tr>
+    <tr>
+      <td>覆盖范围</td>
+      <td>单一平台</td>
+      <td>单一平台</td>
+      <td>跨平台统一</td>
+    </tr>
+    <tr>
+      <td>工具发现</td>
+      <td>查文档</td>
+      <td><code class="language-plaintext highlighter-rouge">--help</code></td>
+      <td>协议内置 <code class="language-plaintext highlighter-rouge">tools/list</code></td>
+    </tr>
+    <tr>
+      <td>典型场景</td>
+      <td>后端集成</td>
+      <td>Agent 快速接入单一平台</td>
+      <td>Agent 统一工具管理</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>它们的关系是递进的</strong>：API 是原始能力 → CLI 是大厂面向 Agent 生态的快速封装 → MCP 是最终的协议层标准。一个 MCP Server 内部可以调 API，也可以调 CLI，它们不互斥。</p>
+
+<p><strong>差距在哪</strong>：新手把三者当成并列的“不同的东西”。高手看到的是 Agent 工具生态的演进脉络——API 一直在，CLI 是大厂看到 MCP/Agent 趋势后的抢位动作，MCP 是最终统一标准。面试官考的是你能不能看到这波 CLI 扎堆出现背后的产业逻辑，以及理解为什么 Agent 时代的终局是协议层标准化而不是各家出各家的 CLI。</p>
+
+<hr />
+
+<h3 id="q大模型的-function-call-是什么tool-use-一般怎么用">Q：大模型的 Function Call 是什么？Tool Use 一般怎么用？</h3>
+
+<blockquote>
+  <p>来源：蚂蚁集团智能体与大模型应用一面 【字节实习Agent开发一面追问：工具注册/解析/调用/回传全链路】【小红书 Agent 岗一面追问：<code class="language-plaintext highlighter-rouge">tool_use</code> 捕获、执行与非标准命令请求】</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“就是让模型调用函数。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>Function Call（Tool Use）是让大模型<strong>不只生成文本，还能结构化地调用外部工具</strong>的核心机制。</p>
+
+<p><strong>工作原理</strong>：</p>
+
+<pre><code class="language-mermaid">sequenceDiagram
+    participant U as 用户
+    participant M as 大模型
+    participant T as 工具/API
+    U-&gt;&gt;M: "帮我查北京明天天气"
+    M-&gt;&gt;M: 分析意图，决定调用 weather_query 工具
+    M--&gt;&gt;T: {"name": "weather_query", "arguments": {"city": "北京", "date": "明天"}}
+    T--&gt;&gt;M: {"temp": "22°C", "weather": "晴"}
+    M-&gt;&gt;U: "北京明天晴，气温 22°C，适合出行"
+</code></pre>
+
+<p>模型不是直接执行代码——它输出的是<strong>结构化的调用意图</strong>（工具名 + 参数 JSON），由外部编排层执行实际调用，再把结果回传给模型做最终整合。</p>
+
+<p><strong>和普通 Prompt 的关键区别</strong>：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>维度</th>
+      <th>普通 Prompt</th>
+      <th>Function Call</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>输出</td>
+      <td>自由文本</td>
+      <td>结构化 JSON（工具名 + 参数）</td>
+    </tr>
+    <tr>
+      <td>能力边界</td>
+      <td>只能用训练数据</td>
+      <td>可接入实时数据和外部系统</td>
+    </tr>
+    <tr>
+      <td>可控性</td>
+      <td>低（自由发挥）</td>
+      <td>高（Schema 约束参数类型和取值）</td>
+    </tr>
+    <tr>
+      <td>典型场景</td>
+      <td>问答、创作</td>
+      <td>查天气、操作数据库、发消息、执行代码</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>在 Agent 项目中的典型 Function Call</strong>：</p>
+
+<ol>
+  <li><strong>信息查询类</strong>：知识库检索、数据库查询、API 调用——Agent 不靠记忆回答，而是实时查</li>
+  <li><strong>操作执行类</strong>：创建工单、发送通知、修改配置——Agent 不只回答问题，还能执行动作</li>
+  <li><strong>代码执行类</strong>：运行 Python 代码做计算、执行 SQL 查询——把模型的“推理”变成“验证”</li>
+</ol>
+
+<p><strong>工程上的关键设计</strong>：</p>
+
+<ul>
+  <li><strong>Schema 定义要精准</strong>：工具描述写给模型看，参数 Schema 约束类型和枚举值。描述越精确，模型选错工具和瞎传参的概率越低</li>
+  <li><strong>返回值要结构化</strong>：工具返回不要是一大段文本，而是 JSON——模型解析结构化数据比理解自然语言更稳定</li>
+  <li><strong>错误处理要前置</strong>：工具调用可能失败，返回值里必须带状态码和错误信息，让模型能根据错误类型决定下一步</li>
+</ul>
+
+<p><strong>差距在哪</strong>：新手把 Function Call 等同于“调函数”。高手理解它是模型从“文本生成器”升级为“行动执行器”的关键机制，且清楚 Schema 设计、返回值规范和错误处理这些工程细节决定了 Tool Use 的稳定性。面试官考的是你对 Agent 核心能力的理解深度。</p>
+
+<p><strong>追问：如果不做训练（不 SFT），怎么让 Agent 知道怎么调用工具？调用格式是什么？</strong></p>
+
+<blockquote>
+  <p>来源：小红书 AI应用开发</p>
+</blockquote>
+
+<p>这道题的关键在于理解：<strong>应用开发者不需要自己训练模型的 tool use 能力，但模型的 tool use 能力不是凭空出现的</strong>。</p>
+
+<p><strong>两种实现路径</strong>：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>路径</th>
+      <th>原理</th>
+      <th>适用场景</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>API 原生 Function Calling</strong></td>
+      <td>模型厂商（OpenAI/Anthropic）在训练阶段已做了 tool use 的 SFT + RLHF，开发者只需传 tool schema</td>
+      <td>使用商业 API 的主流方案</td>
+    </tr>
+    <tr>
+      <td><strong>Prompt-based（ReAct）</strong></td>
+      <td>通过提示词教模型按固定格式输出工具调用，再由代码解析执行</td>
+      <td>没有原生 FC 能力的开源模型</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>API 原生 FC 的工作方式</strong>——开发者只做三件事：</p>
+
+<ol>
+  <li><strong>定义 Tool Schema</strong>：用 JSON Schema 描述工具的名称、功能、参数类型和约束</li>
+  <li><strong>传给 API</strong>：在请求的 <code class="language-plaintext highlighter-rouge">tools</code> 参数中传入 schema 列表</li>
+  <li><strong>解析响应</strong>：模型返回结构化的 <code class="language-plaintext highlighter-rouge">tool_calls</code>（工具名 + 参数 JSON），编排层执行后回传结果</li>
+</ol>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>开发者定义：
+  tools: [{
+    name: “search_order”,
+    description: “根据订单号查询订单状态”,
+    parameters: {
+      order_id: { type: “string”, description: “订单编号” }
+    }
+  }]
+
+模型输出：
+  tool_calls: [{
+    name: “search_order”,
+    arguments: { “order_id”: “2024050312345” }
+  }]
+</code></pre></div></div>
+
+<p>模型“知道”怎么调用，是因为<strong>厂商在训练阶段已经用大量 tool use 数据做了对齐</strong>——开发者不需要训练，但不代表没有训练。</p>
+
+<p><strong>Prompt-based 方案</strong>——当模型没有原生 FC 时：</p>
+
+<p>在 System Prompt 中定义 ReAct 格式，让模型按固定模式输出，再用正则/JSON 解析提取调用意图：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>System Prompt:
+  你可以使用以下工具：
+  - search_order(order_id: str): 查询订单状态
+  
+  使用工具时，严格按以下格式输出：
+  Thought: 我需要查询订单
+  Action: search_order
+  Action Input: {“order_id”: “2024050312345”}
+  
+  等待工具返回后继续推理。
+</code></pre></div></div>
+
+<p><strong>两种方案的工程差异</strong>：</p>
+
+<ul>
+  <li><strong>可靠性</strong>：原生 FC 远高于 Prompt-based——前者有专门的训练和 Schema 约束，后者依赖模型遵循格式的能力</li>
+  <li><strong>并行调用</strong>：原生 FC 支持一次返回多个 tool_calls；Prompt-based 通常只能单步</li>
+  <li><strong>错误率</strong>：Prompt-based 容易输出格式不规范（多一个逗号、少一个引号），需要额外的输出修复逻辑</li>
+</ul>
+
+<p>核心认知：<strong>“不做训练”不等于“没有训练”——应用开发者不需要训练，是因为模型厂商已经做了。真正需要开发者做的是写好 Tool Schema，这是 tool use 准确率最大的杠杆。</strong></p>
+
+<hr />
+
+<h3 id="qmcp-和-skills-的本质区别是什么都是工具调用为什么需要两套机制">Q：MCP 和 Skills 的本质区别是什么？都是工具调用，为什么需要两套机制？</h3>
+
+<blockquote>
+  <p>来源：蚂蚁集团智能体与大模型应用二面 【蚂蚁AI应用开发二面同题：Skill 与 MCP 核心差异】</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“MCP 是协议，Skills 是能力，不太一样。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>MCP 和 Skills 解决的是<strong>不同层次的问题</strong>，虽然都和“Agent 如何使用工具”相关，但它们不在同一个抽象层级上：</p>
+
+<p><strong>MCP（Model Context Protocol）——工具调用的“通信协议”</strong></p>
+
+<p>MCP 解决的是：Agent 如何<strong>发现、调用、获取结果</strong>。它定义了一套标准的交互格式——工具怎么注册（<code class="language-plaintext highlighter-rouge">tools/list</code>）、参数怎么传（JSON Schema）、结果怎么返回。类比网络协议：MCP 是 HTTP，定义了请求/响应的格式，不关心你用这个请求做什么。</p>
+
+<p><strong>Skills——任务执行的“能力单元”</strong></p>
+
+<p>Skills 解决的是：Agent 面对某类任务时，<strong>怎么思考、用什么工具、按什么流程执行</strong>。一个 Skill 包含触发条件、专用 Prompt、可用工具集、输出约束。类比：Skill 是一个“微型 Agent 配置”，告诉 Agent“遇到这类问题时按这个方案办”。</p>
+
+<pre><code class="language-mermaid">flowchart TB
+    subgraph skill["Skill（能力单元）"]
+        direction TB
+        S1["触发条件：用户说「整理面经」"]
+        S2["专用 Prompt：分类+格式化指令"]
+        S3["工具集：文件读写、Grep 搜索"]
+        S4["输出约束：Markdown 格式"]
+    end
+
+    subgraph mcp["MCP（通信协议）"]
+        direction TB
+        M1["工具发现：tools/list"]
+        M2["参数规范：JSON Schema"]
+        M3["调用方式：stdio / HTTP"]
+        M4["结果格式：标准化响应"]
+    end
+
+    skill --&gt;|"Skill 内部通过 MCP 调用工具"| mcp
+</code></pre>
+
+<p><strong>核心区别对照</strong>：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>维度</th>
+      <th>MCP</th>
+      <th>Skills</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>抽象层级</td>
+      <td>通信协议层</td>
+      <td>业务能力层</td>
+    </tr>
+    <tr>
+      <td>解决的问题</td>
+      <td>“怎么调工具”</td>
+      <td>“什么场景用什么方案”</td>
+    </tr>
+    <tr>
+      <td>包含内容</td>
+      <td>工具描述、参数规范、传输方式</td>
+      <td>触发条件 + Prompt + 工具集 + 输出约束</td>
+    </tr>
+    <tr>
+      <td>类比</td>
+      <td>HTTP 协议</td>
+      <td>Web 应用的一个 Controller</td>
+    </tr>
+    <tr>
+      <td>复用粒度</td>
+      <td>单个工具</td>
+      <td>一套完整方案</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>为什么需要两套机制</strong>：</p>
+
+<p>只有 MCP 没有 Skills → Agent 知道怎么调工具，但不知道什么时候该调哪个，需要每次都靠模型自己推理，不稳定。</p>
+
+<p>只有 Skills 没有 MCP → Agent 知道该怎么办，但每个工具要单独写适配代码，不可扩展。</p>
+
+<p>两者结合：Skills 定义“策略”，MCP 提供“基础设施”。Skill 里的工具调用通过 MCP 协议完成——这样新增工具只需要写 MCP Server，不需要改 Skill 逻辑；新增能力只需要写 Skill，不需要改工具接口。</p>
+
+<p><strong>差距在哪</strong>：新手把 MCP 和 Skills 当成两个并列的概念。高手看到的是<strong>分层架构</strong>——MCP 在协议层解决“怎么调”，Skills 在业务层解决“怎么用”，两者是上下层关系而非替代关系。面试官考的是你能不能把 Agent 架构按层次拆清楚。</p>
+
+<hr />
+
+<h3 id="qfunction-calling-的本质价值是什么它解决的是模型能力问题还是系统约束问题">Q：Function Calling 的本质价值是什么？它解决的是“模型能力问题”还是“系统约束问题”？</h3>
+
+<blockquote>
+  <p>来源：Agent 开发面试 30 题</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“让模型能调工具，解决的是能力问题。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>Function Calling 解决的<strong>主要是系统约束问题</strong>，不是模型能力问题。</p>
+
+<p>没有 Function Calling 的时候，模型也能“调工具”——你在 Prompt 里告诉模型“如果需要查天气，请输出 <code class="language-plaintext highlighter-rouge">{"tool": "weather", "city": "北京"}</code>”，模型大概率能输出正确的 JSON。但这个方案有三个致命问题：</p>
+
+<ol>
+  <li><strong>输出格式不可靠</strong>：模型可能在 JSON 前面加一句“好的，我来查一下”，或者少一个引号，导致解析失败</li>
+  <li><strong>调用时机不可控</strong>：你不知道模型这次输出是“要调工具”还是“在正常回复”，必须靠正则或关键词猜</li>
+  <li><strong>参数类型无约束</strong>：price 字段可能传成字符串“一百”，而不是数字 100</li>
+</ol>
+
+<p>Function Calling 的本质价值是<strong>把“模型想调工具”这件事从自由文本变成了结构化协议</strong>：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>没有 FC：模型生成文本 → 你用正则猜它要不要调工具 → 手动解析参数 → 祈祷格式正确
+有了 FC：模型明确返回 tool_call 结构 → 系统确定性地知道要调工具 → 参数有 schema 约束
+</code></pre></div></div>
+
+<p>这不是让模型“更聪明”了，而是<strong>给模型和系统之间建立了一个明确的通信协议</strong>——模型的意图（调什么工具、传什么参数）不再是需要“猜”的自由文本，而是有格式保证的结构化消息。</p>
+
+<p><strong>差距在哪</strong>：新手觉得 FC 是一种“新能力”。高手理解 FC 本质是模型和系统之间的<strong>接口协议</strong>——解决的是“怎么可靠地把模型意图传递给系统”这个工程问题。面试官考的是你对 FC 的理解停留在“会用”还是“理解设计动机”。</p>
+
+<p><strong>追问：有了 Function Calling，是不是可以没有 MCP？</strong></p>
+
+<blockquote>
+  <p>来源：蚂蚁 Agent 开发一面</p>
+</blockquote>
+
+<p>技术上可以——FC 完全能实现 MCP 做的事。但 MCP 的价值不在技术能力，而在<strong>标准化带来的生态效应</strong>。</p>
+
+<p>没有 MCP 时，每接入一个新工具都要：定义 FC schema → 写调用适配 → 处理鉴权 → 维护版本。10 个工具写 10 套适配代码。</p>
+
+<p>有了 MCP，工具提供方按协议实现一次 Server，所有支持 MCP 的 Agent 都能直接用——<strong>工具侧一次实现，Agent 侧零适配</strong>。</p>
+
+<p>类比：HTTP 出现之前，两个系统也能通信（自定义 TCP 协议）。HTTP 的价值不是「让通信变得可能」，而是「让通信有了通用标准，生态可以爆发」。MCP 之于 FC，就是 HTTP 之于 TCP。</p>
+
+<hr />
+
+<h2 id="工具设计与实现">工具设计与实现</h2>
+
+<h3 id="q你会如何设计工具-schema才能降低模型传错参数漏参数乱调用的问题">Q：你会如何设计工具 schema，才能降低模型传错参数、漏参数、乱调用的问题？</h3>
+
+<blockquote>
+  <p>来源：Agent 开发面试 30 题</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“写清楚参数说明就行。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>工具 schema 设计的核心原则是<strong>降低模型的决策负担</strong>——参数越少、约束越紧、描述越具体，出错概率越低。</p>
+
+<p><strong>1. 参数设计——越少越好，越受限越好</strong>：</p>
+
+<ul>
+  <li><strong>合并冗余参数</strong>：不要同时暴露 <code class="language-plaintext highlighter-rouge">start_date</code> 和 <code class="language-plaintext highlighter-rouge">start_timestamp</code>，选一种格式，内部转换</li>
+  <li><strong>用枚举代替自由文本</strong>：<code class="language-plaintext highlighter-rouge">sort_by</code> 不要让模型自由填，用 <code class="language-plaintext highlighter-rouge">enum: ["price_asc", "price_desc", "rating"]</code></li>
+  <li><strong>必填和选填分清楚</strong>：<code class="language-plaintext highlighter-rouge">required</code> 字段必须标明，可选参数给合理的 <code class="language-plaintext highlighter-rouge">default</code> 值，减少模型需要做的决定</li>
+</ul>
+
+<p><strong>2. 描述设计——说“别做什么”比“该做什么”更重要</strong>：</p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"search_hotel"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"parameters"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nl">"city"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nl">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"string"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"城市名，直接使用用户原文（如'北京'），不要从地址中自行提取城市"</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="nl">"check_in"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nl">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"string"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"入住日期，格式 YYYY-MM-DD。如果用户说'下周五'，请转换为具体日期"</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p><strong>3. 命名设计——名字要自解释</strong>：</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">get_weather</code> 比 <code class="language-plaintext highlighter-rouge">fetch_data</code> 好——名字越具体，模型越不容易误调</li>
+  <li>相似工具要通过命名区分清楚：<code class="language-plaintext highlighter-rouge">search_hotel_by_city</code> vs <code class="language-plaintext highlighter-rouge">search_hotel_by_id</code>，而不是一个 <code class="language-plaintext highlighter-rouge">search_hotel</code> 靠参数区分</li>
+</ul>
+
+<p><strong>4. 工具粒度——一个工具做一件事</strong>：</p>
+
+<p>一个“大而全”的工具（既能搜索、又能预订、还能取消）会让模型在参数选择上出错。拆成 <code class="language-plaintext highlighter-rouge">search_hotel</code>、<code class="language-plaintext highlighter-rouge">book_hotel</code>、<code class="language-plaintext highlighter-rouge">cancel_booking</code> 三个工具，每个的参数空间小而确定。</p>
+
+<p><strong>差距在哪</strong>：新手觉得“描述写清楚”就够了。高手从参数设计、描述技巧、命名规范、工具粒度四个角度系统性地降低出错率。面试官考的是你有没有做过“把模型对接到真实工具”的工程经验——只有踩过坑的人才知道 schema 设计有这么多讲究。</p>
+
+<hr />
+
+<h3 id="q同一个能力是做成一个大而全工具还是多个小工具怎么权衡">Q：同一个能力是做成“一个大而全工具”还是“多个小工具”，怎么权衡？</h3>
+
+<blockquote>
+  <p>来源：Agent 开发面试 30 题</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“拆小一点好，职责单一。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>不能一刀切。<strong>拆不拆、怎么拆，取决于模型的工具选择负担和参数填充难度</strong>：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>维度</th>
+      <th>大而全工具</th>
+      <th>多个小工具</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>模型选择负担</td>
+      <td>低（只需选一个工具）</td>
+      <td>高（需从多个里选对的）</td>
+    </tr>
+    <tr>
+      <td>参数复杂度</td>
+      <td>高（参数多、组合多）</td>
+      <td>低（每个工具参数少）</td>
+    </tr>
+    <tr>
+      <td>错误定位</td>
+      <td>难（哪步出错不好查）</td>
+      <td>易（哪个工具失败一目了然）</td>
+    </tr>
+    <tr>
+      <td>编排灵活性</td>
+      <td>低（绑定了固定流程）</td>
+      <td>高（可以自由组合）</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>什么时候用大工具</strong>：</p>
+<ul>
+  <li>操作有强事务性——查库存 + 锁库存 + 扣款必须原子执行，拆开会有一致性风险</li>
+  <li>用户感知是一个动作——“帮我订机票”不应该让用户看到拆成了五步</li>
+</ul>
+
+<p><strong>什么时候拆小工具</strong>：</p>
+<ul>
+  <li>子步骤可以独立使用——搜索酒店和预订酒店是两个独立需求</li>
+  <li>需要灵活编排——“先搜再比再订”的顺序可能因用户需求变化</li>
+  <li>参数空间差异大——搜索只需要城市和日期，预订还需要用户信息和支付方式</li>
+</ul>
+
+<p><strong>实际工程中的折中方案</strong>：对外给模型暴露小工具（降低选择和参数负担），对内用<strong>编排层把小工具组合成事务</strong>（保证一致性）。模型只需要说“我要订这个酒店”，编排层自动执行“校验 → 锁房 → 扣款 → 确认”的事务流程。</p>
+
+<p><strong>差距在哪</strong>：新手只记住了“职责单一”的教条。高手从模型负担、参数复杂度、事务性、编排灵活性四个维度做权衡，且给出了“对外小工具 + 对内事务编排”的折中方案。面试官考的是你在工具设计时有没有系统性的权衡框架。</p>
+
+<hr />
+
+<h3 id="q手撕一个-react-架构的-agent实现文件操作找文件删除文件">Q：手撕一个 ReAct 架构的 Agent，实现文件操作（找文件、删除文件）</h3>
+
+<blockquote>
+  <p>来源：AI 工程师面试（手撕代码，可借助 AI）</p>
+</blockquote>
+
+<p><strong>新手答</strong>：写了个 while 循环拼 Prompt，没有工具抽象，逻辑和 I/O 混在一起。</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>这道题考的是<strong>能不能用 ReAct 范式把“工具定义 → Agent 编排 → 多轮交互”串起来</strong>。用 LangGraph 的 <code class="language-plaintext highlighter-rouge">create_react_agent</code> 实现最清晰：</p>
+
+<p><strong>第一步：定义工具集</strong></p>
+
+<p>每个文件操作封装成独立工具，用 <code class="language-plaintext highlighter-rouge">@tool</code> 装饰器标注名称和描述（模型通过描述选择工具）：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="n">os</span>
+<span class="kn">import</span> <span class="n">glob</span>
+<span class="kn">from</span> <span class="n">langchain_core.tools</span> <span class="kn">import</span> <span class="n">tool</span>
+
+<span class="nd">@tool</span>
+<span class="k">def</span> <span class="nf">list_py_files</span><span class="p">(</span><span class="n">directory</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+    <span class="err">“””</span><span class="n">列出指定目录下所有</span> <span class="p">.</span><span class="n">py</span> <span class="n">文件的路径</span><span class="err">”””</span>
+    <span class="k">return</span> <span class="n">glob</span><span class="p">.</span><span class="nf">glob</span><span class="p">(</span><span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="n">directory</span><span class="p">,</span> <span class="err">“</span><span class="o">**/*</span><span class="p">.</span><span class="n">py</span><span class="err">”</span><span class="p">),</span> <span class="n">recursive</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+<span class="nd">@tool</span>
+<span class="k">def</span> <span class="nf">check_has_main</span><span class="p">(</span><span class="n">file_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="err">“””</span><span class="n">检查指定</span> <span class="n">Python</span> <span class="n">文件中是否包含</span> <span class="n">main</span> <span class="n">函数定义</span><span class="err">”””</span>
+    <span class="k">with</span> <span class="nf">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="err">“</span><span class="n">r</span><span class="err">”</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">content</span> <span class="o">=</span> <span class="n">f</span><span class="p">.</span><span class="nf">read</span><span class="p">()</span>
+    <span class="k">return</span> <span class="err">“</span><span class="k">def</span> <span class="nf">main</span><span class="err">”</span> <span class="ow">in</span> <span class="n">content</span> <span class="ow">or</span> <span class="sh">'</span><span class="s">if __name__</span><span class="sh">'</span> <span class="ow">in</span> <span class="n">content</span>
+
+<span class="nd">@tool</span>
+<span class="k">def</span> <span class="nf">count_lines</span><span class="p">(</span><span class="n">file_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+    <span class="err">“””</span><span class="n">统计指定文件的行数</span><span class="err">”””</span>
+    <span class="k">with</span> <span class="nf">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="err">“</span><span class="n">r</span><span class="err">”</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nf">len</span><span class="p">(</span><span class="n">f</span><span class="p">.</span><span class="nf">readlines</span><span class="p">())</span>
+
+<span class="nd">@tool</span>
+<span class="k">def</span> <span class="nf">delete_file</span><span class="p">(</span><span class="n">file_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="err">“””</span><span class="n">删除指定文件</span><span class="err">，</span><span class="n">返回操作结果</span><span class="err">”””</span>
+    <span class="n">os</span><span class="p">.</span><span class="nf">remove</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">f</span><span class="err">”</span><span class="n">已删除</span><span class="p">:</span> <span class="p">{</span><span class="n">file_path</span><span class="p">}</span><span class="err">”</span>
+</code></pre></div></div>
+
+<p><strong>第二步：创建 ReAct Agent</strong></p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="n">langgraph.prebuilt</span> <span class="kn">import</span> <span class="n">create_react_agent</span>
+<span class="kn">from</span> <span class="n">langchain_openai</span> <span class="kn">import</span> <span class="n">ChatOpenAI</span>
+
+<span class="n">llm</span> <span class="o">=</span> <span class="nc">ChatOpenAI</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="err">”</span><span class="n">gpt</span><span class="o">-</span><span class="mi">4</span><span class="n">o</span><span class="err">”</span><span class="p">)</span>
+<span class="n">tools</span> <span class="o">=</span> <span class="p">[</span><span class="n">list_py_files</span><span class="p">,</span> <span class="n">check_has_main</span><span class="p">,</span> <span class="n">count_lines</span><span class="p">,</span> <span class="n">delete_file</span><span class="p">]</span>
+
+<span class="n">agent</span> <span class="o">=</span> <span class="nf">create_react_agent</span><span class="p">(</span><span class="n">llm</span><span class="p">,</span> <span class="n">tools</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p><code class="language-plaintext highlighter-rouge">create_react_agent</code> 内部实现的就是 ReAct 循环：<strong>思考（选工具 + 定参数）→ 执行（调工具）→ 观察（读返回）→ 思考 → …</strong>，直到模型认为任务完成。</p>
+
+<p><strong>第三步：执行任务</strong></p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># 任务 1：找包含 main 的 py 文件
+</span><span class="n">result</span> <span class="o">=</span> <span class="n">agent</span><span class="p">.</span><span class="nf">invoke</span><span class="p">({</span>
+    <span class="err">“</span><span class="n">messages</span><span class="err">”</span><span class="p">:</span> <span class="p">[{</span><span class="err">“</span><span class="n">role</span><span class="err">”</span><span class="p">:</span> <span class="err">“</span><span class="n">user</span><span class="err">”</span><span class="p">,</span> <span class="err">“</span><span class="n">content</span><span class="err">”</span><span class="p">:</span> <span class="err">“</span><span class="n">找出</span> <span class="o">/</span><span class="n">workspace</span> <span class="n">目录下所有包含</span> <span class="n">main</span> <span class="n">函数的</span> <span class="p">.</span><span class="n">py</span> <span class="n">文件</span><span class="err">”</span><span class="p">}]</span>
+<span class="p">},</span> <span class="n">config</span><span class="o">=</span><span class="p">{</span><span class="err">“</span><span class="n">configurable</span><span class="err">”</span><span class="p">:</span> <span class="p">{</span><span class="err">“</span><span class="n">thread_id</span><span class="err">”</span><span class="p">:</span> <span class="err">“</span><span class="n">task</span><span class="o">-</span><span class="mi">1</span><span class="err">”</span><span class="p">}})</span>
+
+<span class="c1"># 任务 2：删除行数最短的 py 文件
+</span><span class="n">result</span> <span class="o">=</span> <span class="n">agent</span><span class="p">.</span><span class="nf">invoke</span><span class="p">({</span>
+    <span class="err">“</span><span class="n">messages</span><span class="err">”</span><span class="p">:</span> <span class="p">[{</span><span class="err">“</span><span class="n">role</span><span class="err">”</span><span class="p">:</span> <span class="err">“</span><span class="n">user</span><span class="err">”</span><span class="p">,</span> <span class="err">“</span><span class="n">content</span><span class="err">”</span><span class="p">:</span> <span class="err">“</span><span class="n">找出</span> <span class="o">/</span><span class="n">workspace</span> <span class="n">下行数最短的</span> <span class="p">.</span><span class="n">py</span> <span class="n">文件并删除它</span><span class="err">”</span><span class="p">}]</span>
+<span class="p">},</span> <span class="n">config</span><span class="o">=</span><span class="p">{</span><span class="err">“</span><span class="n">configurable</span><span class="err">”</span><span class="p">:</span> <span class="p">{</span><span class="err">“</span><span class="n">thread_id</span><span class="err">”</span><span class="p">:</span> <span class="err">“</span><span class="n">task</span><span class="o">-</span><span class="mi">2</span><span class="err">”</span><span class="p">}})</span>
+</code></pre></div></div>
+
+<p><strong>Agent 的实际执行链路（任务 2 为例）</strong>：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>思考：要找行数最短的 py 文件，先列出所有 py 文件
+  ↓
+行动：list_py_files('/workspace')
+  ↓
+观察：返回 5 个文件路径
+  ↓
+思考：逐个统计行数
+  ↓
+行动：count_lines 逐个调用
+  ↓
+观察：a.py=10, b.py=3, c.py=25...
+  ↓
+思考：b.py 行数最短，删除它
+  ↓
+行动：delete_file('b.py')
+  ↓
+观察：已删除
+  ↓
+思考：任务完成，输出结果
+</code></pre></div></div>
+
+<p><strong>面试官可能追问的细节</strong>：</p>
+
+<ol>
+  <li><strong>为什么要用 <code class="language-plaintext highlighter-rouge">@tool</code> 装饰器而不是直接写函数</strong>：<code class="language-plaintext highlighter-rouge">@tool</code> 会自动从类型注解和 docstring 生成 JSON Schema，这是模型做 function calling 时需要的工具描述</li>
+  <li><strong>thread_id 的作用</strong>：支持多轮对话，同一个 thread_id 下的对话共享记忆，Agent 能引用之前的执行结果</li>
+  <li><strong>如果要加安全限制怎么办</strong>：对 <code class="language-plaintext highlighter-rouge">delete_file</code> 加权限检查——限制只能删除特定目录下的文件、删除前要求用户确认（<code class="language-plaintext highlighter-rouge">interrupt_before</code>）</li>
+  <li><strong>和直接写 Python 脚本的区别</strong>：脚本是写死的流程。ReAct Agent 能根据中间结果动态调整——比如文件读不出来时自动换一种方式查找，不需要提前枚举所有异常路径</li>
+</ol>
+
+<p><strong>差距在哪</strong>：新手写一堆 if-else 硬编码。高手用标准的 ReAct 框架——工具定义（@tool）、Agent 创建（create_react_agent）、任务执行（invoke），代码简洁且可扩展。面试官考的是你能不能用 Agent 范式（而非脚本思维）解决问题，且理解 ReAct 循环的执行机制。</p>
+
+<hr />
+
+<h2 id="高级工具调度">高级工具调度</h2>
+
+<h3 id="q如何在多智能体环境中实现动态发现并注册跨协议工具">Q：如何在多智能体环境中实现动态发现并注册跨协议工具？</h3>
+
+<blockquote>
+  <p>来源：淘天 AI Agent 一面</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“在配置文件里列出所有工具。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>多智能体系统中，每个 Agent 可能需要来自不同来源的工具——MCP Server、REST API、甚至其他 Agent 暴露的能力。<strong>静态配置无法扩展</strong>：新工具上线要改配置重启，Agent 之间的能力共享需要人工同步，协议不同还要分别适配。</p>
+
+<p>解决方案是构建<strong>动态工具发现与注册机制</strong>：</p>
+
+<p><strong>1. 工具注册中心（Tool Registry Service）</strong></p>
+
+<p>所有工具向中心化的注册中心注册自己的能力描述、Schema、端点地址和鉴权要求。注册中心就像一个“工具市场”：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>注册信息示例：
+{
+  "tool_id": "product_search_v2",
+  "capability": "按关键词搜索商品，支持价格、品类筛选",
+  "schema": { ... },          // 输入输出的 JSON Schema
+  "endpoint": "mcp://product-server:8080",
+  "protocol": "MCP",
+  "auth": "bearer_token",
+  "owner_agent": "product-agent"
+}
+</code></pre></div></div>
+
+<p><strong>2. 基于能力的发现（Capability-based Discovery）</strong></p>
+
+<p>Agent 不需要知道工具名，只需描述自己需要什么能力：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Agent 请求："我需要一个能搜索商品的工具"
+注册中心：语义匹配 → 返回 product_search_v2（MCP）、catalog_api（REST）两个候选
+Agent：根据协议偏好和延迟选择最优工具
+</code></pre></div></div>
+
+<p>这比按名字查找更灵活——新工具上线后，只要能力描述匹配，就能被自动发现。</p>
+
+<p><strong>3. 运行时注册（Runtime Registration）</strong></p>
+
+<p>新的 MCP Server 或 Agent 上线后，无需重启系统即可注册新工具：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>新 MCP Server 启动 → 向注册中心发送注册请求 → 注册中心更新索引
+→ 其他 Agent 下次查询时自动发现新工具
+</code></pre></div></div>
+
+<p><strong>4. 跨协议适配层（Cross-Protocol Adaptation）</strong></p>
+
+<p>不同来源的工具协议各异，但调用方 Agent 不应关心底层细节。通过<strong>统一工具接口层 + 协议适配器</strong>解耦：</p>
+
+<pre><code class="language-mermaid">flowchart LR
+    A["调用方 Agent"] --&gt;|"统一 Tool Schema"| R["工具注册中心"]
+    R --&gt; PA["MCP 适配器"]
+    R --&gt; PB["REST 适配器"]
+    R --&gt; PC["A2A 适配器"]
+    PA --&gt; T1["MCP Server\n（商品搜索）"]
+    PB --&gt; T2["REST API\n（支付接口）"]
+    PC --&gt; T3["其他 Agent\n（数据分析能力）"]
+</code></pre>
+
+<p>每个适配器负责将统一的调用格式转换为目标协议的原生格式：</p>
+<ul>
+  <li><strong>MCP 适配器</strong>：直接透传，协议天然兼容</li>
+  <li><strong>REST 适配器</strong>：将 Tool Schema 参数映射为 HTTP 请求参数/body</li>
+  <li><strong>A2A 适配器</strong>：将工具调用转化为对目标 Agent 的任务请求</li>
+</ul>
+
+<p><strong>5. 安全与权限控制</strong></p>
+
+<ul>
+  <li>工具注册需要身份认证——防止恶意工具注入</li>
+  <li>Agent 只能发现自己有权限使用的工具——注册中心按角色过滤</li>
+  <li>跨 Agent 能力共享需要双向授权——提供方授权暴露，使用方授权访问</li>
+</ul>
+
+<p><strong>差距在哪</strong>：新手用静态配置列出所有工具——工具少时能用，工具多了或跨团队协作时根本管不过来。高手设计了一套完整的动态发现机制：注册中心提供工具目录、能力描述实现语义发现、运行时注册支持热扩展、协议适配层屏蔽底层差异。面试官考的是你对多智能体工具生态的架构设计能力。</p>
+
+<hr />
+
+<h3 id="qmcp-协议的完整调用过程是怎样的">Q：MCP 协议的完整调用过程是怎样的？</h3>
+
+<blockquote>
+  <p>来源：高德 AI 应用开发实习一面 【腾讯AI应用开发一面追问：领域MCP工具（慢SQL诊断）与Agent系统串联】【唯品会大模型算法实习追问：Tool Schema 以 MCP JSON 注册后，Host、Client 与 Server 背后发生了什么】</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“就是调 API。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>MCP（Model Context Protocol）不是简单的 API 调用——它是一个<strong>三角色架构 + 能力协商 + 标准化通信</strong>的完整协议。</p>
+
+<p><strong>三个核心角色</strong>：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>角色</th>
+      <th>职责</th>
+      <th>典型实例</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Host</td>
+      <td>发起任务的宿主环境，内含 LLM</td>
+      <td>IDE（如 Cursor）、Agent 框架</td>
+    </tr>
+    <tr>
+      <td>Client</td>
+      <td>协议客户端，管理与 Server 的连接生命周期</td>
+      <td>SDK 内置的 MCP Client</td>
+    </tr>
+    <tr>
+      <td>Server</td>
+      <td>能力提供方，暴露工具/资源/Prompt</td>
+      <td>文件系统 Server、数据库 Server</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>完整调用流程</strong>：</p>
+
+<pre><code class="language-mermaid">sequenceDiagram
+    participant H as Host（IDE/Agent）
+    participant C as MCP Client
+    participant S as MCP Server
+
+    Note over C,S: 阶段一：初始化
+    C-&gt;&gt;S: initialize 请求（协议版本、客户端能力）
+    S--&gt;&gt;C: 响应（服务端能力：支持的工具/资源/Prompt）
+    C-&gt;&gt;S: initialized 通知（握手完成）
+
+    Note over C,S: 阶段二：工具发现
+    C-&gt;&gt;S: tools/list 请求
+    S--&gt;&gt;C: 返回工具列表（name + description + inputSchema）
+
+    Note over H,S: 阶段三：工具调用
+    H-&gt;&gt;H: LLM 分析用户意图，决定调用某工具
+    H-&gt;&gt;C: 请求调用工具（name + arguments）
+    C-&gt;&gt;S: tools/call 请求（JSON-RPC 2.0 格式）
+    S-&gt;&gt;S: 执行工具逻辑
+    S--&gt;&gt;C: 返回执行结果
+    C--&gt;&gt;H: 回传结果
+
+    Note over H: 阶段四：结果回传
+    H-&gt;&gt;H: LLM 将工具结果纳入上下文，继续推理
+</code></pre>
+
+<p><strong>每个阶段的关键细节</strong>：</p>
+
+<ol>
+  <li>
+    <p><strong>初始化（Handshake）</strong>：Client 和 Server 交换能力声明——Client 告诉 Server 自己支持什么功能，Server 告诉 Client 自己提供哪些能力（工具、资源、Prompt 模板）。这一步是<strong>能力协商</strong>，双方对齐后才开始正式通信。</p>
+  </li>
+  <li>
+    <p><strong>工具发现（Discovery）</strong>：Client 调用 <code class="language-plaintext highlighter-rouge">tools/list</code>，Server 返回所有可用工具的 Schema，包括名称、描述和参数定义（JSON Schema 格式）。这些 Schema 会被注入到 LLM 的上下文中，供模型选择工具。</p>
+  </li>
+  <li>
+    <p><strong>工具调用（Invocation）</strong>：Host 中的 LLM 根据用户意图和工具 Schema，生成结构化的调用请求（工具名 + 参数 JSON）。Client 将请求以 JSON-RPC 2.0 格式发送给 Server，Server 执行后返回结果。</p>
+  </li>
+  <li>
+    <p><strong>结果回传（Feedback）</strong>：Client 将工具执行结果回传给 Host，LLM 将结果纳入上下文，决定是继续调用其他工具，还是生成最终回答。</p>
+  </li>
+</ol>
+
+<p><strong>传输层的两种模式</strong>：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>传输方式</th>
+      <th>通信机制</th>
+      <th>适用场景</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>stdio</td>
+      <td>标准输入/输出（进程间通信）</td>
+      <td>本地工具（文件操作、CLI 工具）</td>
+    </tr>
+    <tr>
+      <td>Streamable HTTP / SSE</td>
+      <td>HTTP 请求 + Server-Sent Events</td>
+      <td>远程服务、跨网络调用</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>协议设计的核心原则</strong>：</p>
+<ul>
+  <li><strong>每次调用无状态</strong>：Server 不保留调用间的状态，幂等性好</li>
+  <li><strong>Server 声明能力</strong>：Client 不需要提前知道 Server 有什么工具，通过协议动态发现</li>
+  <li><strong>Client 管理生命周期</strong>：连接的建立、维护和关闭都由 Client 负责</li>
+  <li><strong>JSON-RPC 2.0</strong>：所有消息采用统一的 JSON-RPC 2.0 格式，请求和响应结构清晰</li>
+</ul>
+
+<p><strong>差距在哪</strong>：新手把 MCP 等同于调 API——完全忽略了三角色架构、初始化握手、能力协商这些协议层设计。高手能完整描述从初始化到工具发现到调用到结果回传的全链路，且清楚 stdio 和 HTTP/SSE 两种传输模式的适用场景。面试官考的是你对 MCP 协议的理解是停留在“听说过”还是“真的看过协议规范”。</p>
+
+<hr />
+
+<h3 id="qllm-是怎么从用户意图匹配到具体工具参数的">Q：LLM 是怎么从用户意图匹配到具体工具参数的？</h3>
+
+<blockquote>
+  <p>来源：高德 AI 应用开发实习一面</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“模型自己就能理解。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>这不是“模型自己理解”——而是一个<strong>Schema 注入 + 模型微调 + 参数校验</strong>的工程化管线。</p>
+
+<p><strong>核心机制：Schema 注入 + 结构化输出</strong></p>
+
+<p>LLM 并不是凭空猜出工具参数的。实际流程是：</p>
+
+<ol>
+  <li><strong>Schema 注入</strong>：工具的 JSON Schema（名称、描述、参数类型、枚举值等）被注入到系统 Prompt 中，作为模型的上下文信息</li>
+  <li><strong>意图识别</strong>：模型对用户自然语言做隐式 NLU（自然语言理解），提取关键实体和意图</li>
+  <li><strong>参数生成</strong>：模型根据 Schema 约束，生成符合格式的 JSON 参数输出</li>
+  <li><strong>模型微调基础</strong>：模型在训练阶段经过 SFT（有监督微调）和 RLHF（人类反馈强化学习），学会了在特定格式约束下生成结构化输出</li>
+</ol>
+
+<p><strong>参数匹配的四大难题</strong>：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>难题类型</th>
+      <th>用户输入示例</th>
+      <th>模型需要做的事</th>
+      <th>出错风险</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>意图模糊</td>
+      <td>“帮我订明天的机票”</td>
+      <td>缺出发城市、到达城市、舱位 → 需要追问</td>
+      <td>模型可能自行脑补参数</td>
+    </tr>
+    <tr>
+      <td>类型转换</td>
+      <td>“三百块以下”</td>
+      <td>提取数字 300 + 运算符 ≤</td>
+      <td>可能传成字符串而非数值</td>
+    </tr>
+    <tr>
+      <td>必填缺失</td>
+      <td>“查一下航班”</td>
+      <td>缺航班号或日期 → 必须追问</td>
+      <td>模型可能编造一个航班号</td>
+    </tr>
+    <tr>
+      <td>枚举映射</td>
+      <td>“头等舱”</td>
+      <td>映射到枚举值 <code class="language-plaintext highlighter-rouge">first_class</code></td>
+      <td>可能传中文而非枚举值</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>工程解决方案</strong>：</p>
+
+<p><strong>1. Schema 设计优化</strong>：</p>
+<ul>
+  <li>在参数描述中加入示例值和格式说明</li>
+  <li>枚举值列表写全，减少模型猜测空间</li>
+  <li>用“负面描述”说明不该怎么填</li>
+</ul>
+
+<p><strong>2. 参数校验层</strong>：</p>
+<ul>
+  <li>模型输出的 JSON 必须经过 Schema 校验（如 Pydantic / JSON Schema Validator）</li>
+  <li>类型不对、必填缺失、枚举不匹配的直接拒绝，不执行</li>
+</ul>
+
+<p><strong>3. 多轮纠错机制</strong>：</p>
+<ul>
+  <li>校验失败时，把错误信息回传给模型，让模型修正参数</li>
+  <li>比如“city 字段是必填的，请向用户询问出发城市”</li>
+</ul>
+
+<p><strong>4. 默认值与上下文推理</strong>：</p>
+<ul>
+  <li>可选参数用合理的默认值填充</li>
+  <li>利用对话历史和用户画像推断缺失信息（如用户常用出发城市）</li>
+</ul>
+
+<p><strong>三种参数获取策略对比</strong>：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>策略</th>
+      <th>适用场景</th>
+      <th>优点</th>
+      <th>缺点</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>直接提取</td>
+      <td>用户意图明确、参数齐全</td>
+      <td>一轮完成，体验好</td>
+      <td>信息不全时会瞎猜</td>
+    </tr>
+    <tr>
+      <td>多轮追问</td>
+      <td>关键参数缺失、意图模糊</td>
+      <td>参数准确，不会瞎编</td>
+      <td>交互轮次多，体验差</td>
+    </tr>
+    <tr>
+      <td>画像推理</td>
+      <td>可选参数、用户有历史偏好</td>
+      <td>减少追问，体验流畅</td>
+      <td>依赖画像数据，冷启动难</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>实际系统中三种策略<strong>混合使用</strong>：必填参数缺失 → 追问；可选参数缺失 → 用默认值或画像推理；所有参数齐全 → 直接提取。</p>
+
+<p><strong>差距在哪</strong>：新手把参数匹配当成模型的“魔法”。高手清楚这背后是 Schema 注入提供约束、模型微调提供能力、校验层提供兜底的三层机制，且知道意图模糊、类型转换、必填缺失、枚举映射这四类难题各自的解法。面试官考的是你有没有在真实项目中处理过“模型传错参数”的问题。</p>
+
+<hr />
+
+<h3 id="qagent-做多轮工具调用和单轮调用相比会面临哪些额外挑战">Q：Agent 做多轮工具调用和单轮调用相比，会面临哪些额外挑战？</h3>
+
+<blockquote>
+  <p>来源：阿里国际大模型算法一面</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“多调几次工具而已，没什么区别。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>区别非常大。单轮工具调用的链路是“LLM → 调一次工具 → 拿结果 → 回复”，流程短、风险可控。但多轮工具调用的链路是“LLM → 工具 1 → 结果 1 → LLM 再推理 → 工具 2 → 结果 2 → … → 最终回复”，<strong>每多一轮，系统复杂度都在指数级增长</strong>。</p>
+
+<p>具体来说，多轮工具调用面临<strong>五个单轮不存在的额外挑战</strong>：</p>
+
+<p><strong>1. 错误累积（Error Propagation）</strong></p>
+
+<p>单轮调用即使工具返回了不完美的结果，模型直接用就行。但多轮场景下，工具 1 返回的微小偏差会被工具 2 放大——比如第一步查到的商品 ID 有误，后续所有基于这个 ID 的操作（查价格、查库存、下单）全部错误。<strong>错误不是加法，是乘法</strong>。</p>
+
+<p><strong>2. 上下文膨胀</strong></p>
+
+<p>每次工具调用都会往上下文里塞入请求参数和返回结果。5-6 轮调用之后，上下文的 50% 以上可能都是工具的中间结果，真正关键的用户意图和任务目标被淹没了，模型的推理质量随之下降。</p>
+
+<p><strong>3. 规划与依赖管理</strong></p>
+
+<p>多轮调用意味着工具之间存在依赖关系——工具 B 需要工具 A 的输出作为输入。模型必须正确规划执行顺序，理解哪些工具可以并行、哪些必须串行。单轮调用完全没有这个问题。</p>
+
+<p><strong>4. 状态一致性</strong></p>
+
+<p>中间状态可能在调用间隙发生变化。经典场景：第一步查库存显示“有货”，第二步处理支付，第三步准备发货时发现库存已经被别人抢走了。多轮调用需要<strong>类似事务的语义</strong>来保证状态一致。</p>
+
+<p><strong>5. 延迟叠加</strong></p>
+
+<p>N 次工具调用 = N ×（网络延迟 + 工具执行时间 + 模型推理时间）。单轮调用可能 2 秒完成，5 轮调用可能要 15-20 秒，用户体验急剧恶化。</p>
+
+<p><strong>单轮 vs 多轮的系统性对比</strong>：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>维度</th>
+      <th>单轮工具调用</th>
+      <th>多轮工具调用</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>错误传播</td>
+      <td>无——一次调用，错了就错了</td>
+      <td>逐步累积放大，后续步骤全部受影响</td>
+    </tr>
+    <tr>
+      <td>上下文压力</td>
+      <td>低——只有一组工具输入输出</td>
+      <td>高——N 组中间结果挤占上下文</td>
+    </tr>
+    <tr>
+      <td>依赖管理</td>
+      <td>无——没有工具间依赖</td>
+      <td>必须正确规划执行顺序和依赖图</td>
+    </tr>
+    <tr>
+      <td>状态一致性</td>
+      <td>无风险——单次调用无时间窗口</td>
+      <td>调用间隙状态可能变化</td>
+    </tr>
+    <tr>
+      <td>延迟</td>
+      <td>可控——单次往返</td>
+      <td>线性叠加，用户感知明显</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>每个挑战对应的工程解法</strong>：</p>
+
+<pre><code class="language-mermaid">flowchart LR
+    E1["错误累积"] --&gt; S1["中间结果校验 +\n失败回滚机制"]
+    E2["上下文膨胀"] --&gt; S2["工具结果摘要化 +\n选择性上下文注入"]
+    E3["依赖管理"] --&gt; S3["显式依赖图 /\nDAG 编排引擎"]
+    E4["状态一致性"] --&gt; S4["幂等操作 +\n乐观锁"]
+    E5["延迟叠加"] --&gt; S5["无依赖调用并行化 +\n中间结果流式返回"]
+</code></pre>
+
+<ul>
+  <li><strong>错误累积</strong> → 每步工具返回后做中间结果校验，不合理的立即重试或回滚，不让脏数据流入下一步</li>
+  <li><strong>上下文膨胀</strong> → 对工具返回结果做摘要压缩（只保留下游需要的字段），或用选择性上下文注入，只把当前步骤需要的历史结果放进去</li>
+  <li><strong>依赖管理</strong> → 构建显式的工具依赖图（DAG），由编排引擎而非模型来决定执行顺序和并行策略</li>
+  <li><strong>状态一致性</strong> → 关键操作设计为幂等的（重复调用不会产生副作用），配合乐观锁或预留/确认机制处理并发冲突</li>
+  <li><strong>延迟叠加</strong> → 分析依赖图，把无依赖关系的工具调用并行执行；同时对用户做中间结果的流式返回，降低等待感</li>
+</ul>
+
+<p><strong>差距在哪</strong>：新手觉得多轮和单轮就是”多调几次”的区别。高手能准确识别出错误累积、上下文膨胀、依赖管理、状态一致性、延迟叠加这五个多轮特有的系统性挑战，且每个挑战都有对应的工程解法。面试官考的是你对多轮工具调用的系统复杂度有没有真实的认知——只有做过多步 Agent 的人才会踩到这些坑。</p>
+
+<hr />
+
+<h3 id="q为什么将-agent-工具注册到微服务注册中心如-nacos而不是用-mcp工具的自动注入怎么实现">Q：为什么将 Agent 工具注册到微服务注册中心（如 Nacos）而不是用 MCP？工具的自动注入怎么实现？</h3>
+
+<blockquote>
+  <p>来源：遥望科技 Agent开发一面</p>
+</blockquote>
+
+<p><strong>新手答</strong>：”MCP 是标准协议，应该统一用 MCP 就好了。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>这两种方案解决的是不同层面的问题，选型取决于你的系统架构和工具的生命周期管理需求。</p>
+
+<p><strong>MCP 的定位</strong>：标准化的模型-工具通信协议。它定义了 Host/Client/Server 三层架构，解决的是”模型如何发现和调用一个工具”的接口标准化问题。适合：工具相对固定、单机或小规模部署、对接多个不同的 LLM。</p>
+
+<p><strong>注册中心（Nacos/Consul）的定位</strong>：分布式服务治理。它解决的是”工具作为微服务如何动态上下线、负载均衡、灰度发布”的运维问题。适合：工具本身是后端微服务、需要弹性伸缩、多实例负载均衡、灰度切流。</p>
+
+<p><strong>选 Nacos 不选 MCP 的典型场景</strong>：</p>
+
+<ol>
+  <li><strong>工具就是已有的后端接口</strong> — 团队已经有成熟的微服务体系（Spring Cloud + Nacos），工具只是在已有接口上包一层 Tool Description，没必要再引入一套 MCP Server</li>
+  <li><strong>动态上下线</strong> — 工具服务需要根据负载弹性扩缩容，Nacos 天然支持健康检查和实例摘除，MCP 没有这个能力</li>
+  <li><strong>灰度和版本管理</strong> — 同一个工具的 v1 和 v2 可以通过 Nacos 的 metadata 做流量切分，无需改 Agent 代码</li>
+</ol>
+
+<p><strong>工具自动注入的实现</strong>：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>1. 每个工具服务启动时向 Nacos 注册，metadata 中携带 Tool Schema（名称、描述、参数 JSON Schema）
+2. Agent Gateway 订阅 Nacos 的服务变更事件
+3. 有新工具上线 → Gateway 自动拉取其 Schema → 注入到 Agent 的可用工具列表
+4. 工具下线 → Gateway 自动移除，Agent 不再调用
+</code></pre></div></div>
+
+<p>这样实现了<strong>零代码热插拔</strong>：新工具上线不需要重启 Agent，不需要改 Prompt，不需要重新部署。</p>
+
+<p><strong>两者不矛盾</strong>：在更大规模的系统里，MCP 管协议标准（模型怎么调工具），Nacos 管服务治理（工具实例怎么管理）。可以在 MCP Server 内部用 Nacos 做服务发现。</p>
+
+<p><strong>差距在哪</strong>：新手把工具管理等同于”协议选型”。高手区分了协议层（MCP）和治理层（注册中心）的职责差异，且能根据团队已有基础设施做务实选型。面试官考的是你有没有在真实微服务环境中做过工具集成——纯 Demo 项目不会遇到动态上下线和灰度切流的问题。</p>
+
+<hr />
+
+<h3 id="q推理模型如-o1deepseek-r1为什么不支持工具调用技术原因是什么">Q：推理模型（如 o1/DeepSeek-R1）为什么不支持工具调用？技术原因是什么？</h3>
+
+<blockquote>
+  <p>来源：秋招AI面经问题汇总</p>
+</blockquote>
+
+<p><strong>新手答</strong>：”可能还没开发完吧，以后会支持的。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>推理模型不支持（或难以支持）工具调用有几个技术原因：</p>
+
+<ol>
+  <li><strong>训练目标冲突</strong>：推理模型（如 o1）在训练时强化的是”长链思维推理”——鼓励模型在内部 CoT 中持续思考。而工具调用要求模型在推理中途”暂停思考、输出结构化调用、等待外部结果”，这两种行为模式在 RL 训练中互相干扰</li>
+  <li><strong>输出格式约束</strong>：推理模型的 CoT 是自由文本流，插入结构化的 JSON tool_call 会破坏思维链的连贯性，导致推理质量下降</li>
+  <li><strong>延迟敏感</strong>：推理模型的 thinking token 是连续生成的，中途插入工具调用意味着要暂停生成→等待外部响应→恢复生成，这打断了 KV Cache 的连续性</li>
+  <li><strong>训练数据稀缺</strong>：推理模型的 RL 训练数据主要是数学/代码/逻辑题，很少包含”边推理边调工具”的轨迹数据</li>
+  <li><strong>变通方案</strong>：在推理模型外包一层 orchestrator——先用推理模型做规划，再用普通模型执行工具调用</li>
+</ol>
+
+<p><strong>差距在哪</strong>：面试官要看你对”不同模型有不同能力边界”的理解——不是所有模型都适合做 Agent 的执行引擎，选型很重要。</p>
+
+<hr />
+
+<h3 id="q多工具场景下怎么定工具调用的优先级">Q：多工具场景下怎么定工具调用的优先级？</h3>
+
+<blockquote>
+  <p>来源：字节AI产品（智能体方向）</p>
+</blockquote>
+
+<p><strong>新手答</strong>：”按用户说的顺序来呗。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>工具调用优先级决策是 Agent 规划能力的核心体现，策略包括：</p>
+
+<ol>
+  <li><strong>依赖关系优先</strong>：有些工具的输入依赖另一个工具的输出（如”查航班”必须在”确认目的地”之后），形成 DAG 拓扑排序</li>
+  <li><strong>时效性约束</strong>：有时间窗口的操作优先（如”订票”有库存变化风险，”约饭”时间灵活），越容易失效的越先做</li>
+  <li><strong>不可逆性排序</strong>：可撤销的操作可以先做试试，不可逆操作（如支付、发送消息）放最后并加人工确认</li>
+  <li><strong>资源锁定</strong>：需要锁定外部资源的操作（如预订座位）优先执行，避免并发竞争导致失败</li>
+  <li><strong>Prompt 引导</strong>：在 system prompt 中给出优先级规则（”涉及资源锁定的操作优先于信息查询类操作”），让模型在规划时遵循</li>
+  <li><strong>动态调整</strong>：执行过程中根据前序工具的返回结果动态调整后续工具的优先级（如航班取消→优先改签而非继续订酒店）</li>
+</ol>
+
+<p><strong>差距在哪</strong>：面试官考的是你对”Agent 不是简单串行执行”的理解——优先级涉及依赖分析、风险评估、资源约束多个维度。</p>
+
+<hr />
+
+<h2 id="q开源模型的-function-calling-能力较弱如何通过微调或-prompt-engineering-提升">Q：开源模型的 Function Calling 能力较弱，如何通过微调或 Prompt Engineering 提升？</h2>
+
+<blockquote>
+  <p>来源：Agent开发八股合集（南京大学）</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“换更大的模型就好了，或者加几个 few-shot 示例。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>开源模型（如 Qwen、Llama、Mistral）的 FC 能力弱主要表现在三个层面：<strong>工具选择错误、参数格式错误、幻觉调用不存在的工具</strong>。优化手段分 Prompt 侧和训练侧两条路：</p>
+
+<p><strong>Prompt 侧（零成本，立即生效）：</strong></p>
+
+<ol>
+  <li><strong>Schema 精简</strong>：工具描述越短越好，去掉冗余字段；参数用 enum 约束可选值而非自由文本</li>
+  <li><strong>格式强约束</strong>：在 system prompt 中用 JSON Schema + 严格示例约束输出格式，加 <code class="language-plaintext highlighter-rouge">"你只能使用以下工具，不可编造工具名"</code> 的硬约束</li>
+  <li><strong>Few-shot 对齐</strong>：给 2-3 个“用户意图 → 正确工具调用”的示例，尤其覆盖参数边界情况</li>
+  <li><strong>ReAct 格式引导</strong>：让模型先输出 Thought（思考为什么选这个工具），再输出 Action，推理链降低盲目调用概率</li>
+  <li><strong>结构化输出</strong>：用 <code class="language-plaintext highlighter-rouge">response_format: json_object</code> 或 Outlines/Guidance 等约束解码库强制格式合法</li>
+</ol>
+
+<p><strong>训练侧（效果更稳，需要数据和算力）：</strong></p>
+
+<ol>
+  <li><strong>FC-SFT 数据构造</strong>：
+    <ul>
+      <li>从业务日志中提取“用户 query → 正确工具调用”对</li>
+      <li>用强模型（如 GPT-4/Claude）生成 FC 标注数据，覆盖正例 + 负例（不该调用的场景也要标注为“不调用”）</li>
+      <li>数据格式要和推理时的 Prompt 格式完全一致</li>
+    </ul>
+  </li>
+  <li><strong>LoRA 微调</strong>：
+    <ul>
+      <li>在基座模型上用 LoRA r=16-32 微调，只训 FC 相关能力</li>
+      <li>训练集要覆盖：工具选择、参数提取、多工具串联、拒绝调用四类场景</li>
+      <li>加入 “none” 类样本，防止模型对所有 query 都硬调工具</li>
+    </ul>
+  </li>
+  <li><strong>Constrained Decoding（约束解码）</strong>：
+    <ul>
+      <li>不改模型权重，在解码阶段用 Grammar/FSM 约束只能输出合法的工具名和参数结构</li>
+      <li>工具：Outlines、llama.cpp 的 GBNF grammar、vLLM 的 guided decoding</li>
+    </ul>
+  </li>
+</ol>
+
+<p><strong>工程组合拳（实际生产推荐）：</strong></p>
+
+<p>Prompt 强约束 + Few-shot → 解决 80% 的格式和选择问题
+LoRA 微调 → 解决模型“理解不了复杂意图”的根本能力问题
+约束解码 → 兜底，保证输出格式 100% 合法</p>
+
+<p><strong>差距在哪</strong>：面试官考的是你对“FC 能力不足”的拆解能力——不是一句“换大模型”，而是能区分格式问题、选择问题、能力问题，分别用 Prompt/约束解码/微调三层手段组合解决。</p>
+
+<hr />
+
+<h2 id="skill-边界模糊时的工具披露">Skill 边界模糊时的工具披露</h2>
+
+<h3 id="q对于边界不好定义的场景skill-形式不能很好区分场景披露工具怎么办">Q：对于边界不好定义的场景，Skill 形式不能很好区分场景披露工具，怎么办？</h3>
+
+<blockquote>
+  <p>来源：阿里暑期Agent算法二面</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“那就把所有工具都给模型看呗。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>当场景边界模糊时，静态的 Skill → 工具映射会失效。解决思路是从“硬规则匹配”转向“动态推理 + 渐进披露”。</p>
+
+<p><strong>问题本质</strong>：Skill 的核心假设是“场景可以被清晰划分”——每个 Skill 对应一组明确的工具。但真实对话中，用户意图经常在多个 Skill 的边界上（比如“帮我查一下上周的销售数据，然后画个图发给老板”——涉及数据查询、可视化、通信三个 Skill）。</p>
+
+<p><strong>分层解决方案：</strong></p>
+
+<table>
+  <thead>
+    <tr>
+      <th>层级</th>
+      <th>策略</th>
+      <th>适用场景</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>意图预分类</strong></td>
+      <td>LLM 先判断属于哪几个 Skill，按置信度披露</td>
+      <td>意图基本可判但有交叉</td>
+    </tr>
+    <tr>
+      <td><strong>渐进式披露</strong></td>
+      <td>先给核心工具，执行中发现需要就动态追加</td>
+      <td>意图需要多步才能明确</td>
+    </tr>
+    <tr>
+      <td><strong>工具描述自带触发条件</strong></td>
+      <td>在 tool description 中写明“当用户需要 XX 时使用”，让 LLM 自主判断</td>
+      <td>工具间无强耦合</td>
+    </tr>
+    <tr>
+      <td><strong>Fallback 全局工具池</strong></td>
+      <td>设置一批“全场景可用”的通用工具（如搜索、计算）</td>
+      <td>兜底</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>工程实践：</strong></p>
+<ol>
+  <li><strong>两阶段路由</strong>：第一阶段用轻量分类器（或规则）粗筛 Top 3 Skill；第二阶段把这些 Skill 的工具合并后送给 LLM 选择</li>
+  <li><strong>动态工具注册</strong>：Agent 执行中途发现当前工具不够，主动请求“追加工具”——类似人类在做事时发现需要新权限</li>
+  <li><strong>相似度兜底</strong>：当分类器置信度低于阈值时，用 query 和所有工具描述做 embedding 相似度，取 Top K 直接送给模型</li>
+</ol>
+
+<p><strong>差距在哪</strong>：面试官考的是你对“Skill 系统设计假设”的理解——Skill 本质是静态场景划分，但现实是模糊的。能说出多阶段路由 + 渐进披露 + 动态追加的组合方案，说明你在生产中遇到过这个问题并做了系统性解决。</p>
+
+<hr />
+
+<h2 id="多-skill-串行嵌套的容错设计">多 Skill 串行嵌套的容错设计</h2>
+
+<h3 id="q多-skill-串行嵌套时依赖冲突参数不兼容怎么做容错有无编排优先级调度">Q：多 Skill 串行/嵌套时，依赖冲突、参数不兼容怎么做容错？有无编排优先级调度？</h3>
+
+<blockquote>
+  <p>来源：百度 AI Agent前端研发实习生一面</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“按顺序执行就行了，失败就报错。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>多 Skill 编排的核心挑战是<strong>上游 Skill 输出不一定能被下游 Skill 消费</strong>——格式不匹配、字段缺失、语义偏移都可能发生。</p>
+
+<p><strong>容错机制设计：</strong></p>
+
+<pre><code class="language-mermaid">flowchart TD
+    A[Skill A 输出] --&gt; V{输出校验}
+    V --&gt;|格式合法| B[参数适配层]
+    V --&gt;|格式异常| R1[重试 Skill A / 换 Prompt]
+    B --&gt;|兼容| C[Skill B 执行]
+    B --&gt;|不兼容| R2[降级：用默认参数 / 跳过 Skill B]
+    C --&gt;|成功| D[继续下游]
+    C --&gt;|失败| R3[Skill B 内部重试 / Fallback Skill]
+</code></pre>
+
+<p><strong>关键设计点：</strong></p>
+
+<ol>
+  <li><strong>参数适配层</strong>：Skill 之间插入一个 adapter，做格式转换和字段映射。不让 Skill 直接互相传参——解耦后每个 Skill 独立演化</li>
+  <li><strong>Schema 契约</strong>：每个 Skill 声明输入/输出 Schema（JSON Schema），编排引擎在运行前做静态校验——能提前发现不兼容而非运行时崩溃</li>
+  <li><strong>优先级调度</strong>：当多个 Skill 可以并行时，按紧急程度和依赖关系排序。有硬依赖的串行（A→B），无依赖的并行（A∥C），部分依赖的条件触发（B 完成后看结果决定是否触发 D）</li>
+  <li><strong>幂等保证</strong>：同一个 Skill 重复执行不产生副作用。这样任何一步失败后可以安全重试整条链</li>
+  <li><strong>部分成功语义</strong>：链条中 Skill B 失败不应让整个任务失败——返回“A 已完成，B 因 XX 原因失败，C 跳过”</li>
+</ol>
+
+<p><strong>差距在哪</strong>：面试官考的是你对“工具编排是一个分布式系统问题”的认知。只说“顺序执行”说明你没处理过多工具协作的复杂性。能说出适配层 + Schema 契约 + 幂等 + 部分成功，说明你有生产级的编排设计经验。</p>
+
+<hr />
+
+<h3 id="q你们有没有用-mcp为什么要把-oauth21-接到-mcp-里">Q：你们有没有用 MCP？为什么要把 OAuth2.1 接到 MCP 里？</h3>
+
+<blockquote>
+  <p>来源：视频面经汇总</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“用了 MCP，OAuth 是做认证的。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>MCP（Model Context Protocol）本身只解决“模型如何发现和调用工具”的问题，但在企业级 Agent 系统中，<strong>工具背后的服务往往有权限管控</strong>——调用 Slack 发消息需要 OAuth token，查 Google Drive 需要用户授权，操作 GitHub 需要 Personal Access Token。</p>
+
+<p><strong>为什么 OAuth2.1 要接到 MCP 里：</strong></p>
+
+<ol>
+  <li><strong>代替静态 token</strong>：早期 MCP Server 配置里直接写死 API Key，安全风险极高。OAuth2.1 提供动态令牌 + 自动续期，token 泄漏后可以吊销</li>
+  <li><strong>用户级权限隔离</strong>：Agent 代替用户操作时，必须用该用户的 OAuth token 而非全局 service account。否则“帮用户 A 查邮件”可能读到用户 B 的数据</li>
+  <li><strong>最小权限原则</strong>：OAuth2.1 的 scope 机制天然适合限制工具权限——MCP Server 声明需要哪些 scope，用户授权时看到明确的权限列表</li>
+  <li><strong>标准化</strong>：不同 SaaS 服务（Google、Microsoft、Slack）都走 OAuth 协议，MCP Server 不需要为每个服务写不同的认证逻辑</li>
+</ol>
+
+<p><strong>典型架构：</strong></p>
+
+<pre><code class="language-mermaid">sequenceDiagram
+    participant User
+    participant Agent
+    participant MCP Server
+    participant OAuth Provider
+    participant API Service
+
+    User-&gt;&gt;Agent: "帮我查上周的邮件"
+    Agent-&gt;&gt;MCP Server: 调用 gmail.search 工具
+    MCP Server-&gt;&gt;MCP Server: 检查本地是否有有效 token
+    MCP Server-&gt;&gt;OAuth Provider: token 过期，用 refresh_token 续期
+    OAuth Provider--&gt;&gt;MCP Server: 新 access_token
+    MCP Server-&gt;&gt;API Service: 带 token 调用 Gmail API
+    API Service--&gt;&gt;MCP Server: 邮件列表
+    MCP Server--&gt;&gt;Agent: 格式化结果
+</code></pre>
+
+<p><strong>差距在哪</strong>：新手只知道 OAuth 是“登录用的”。高手理解 MCP + OAuth2.1 组合解决的是 Agent 场景下“代用户操作第三方服务”的授权链路问题——这是 Agent 从 Demo 走向生产的关键安全基础设施。</p>
+
+<hr />
+
+<h3 id="q工具返回了非常大的数据超出了大模型的上下文窗口怎么办">Q：工具返回了非常大的数据超出了大模型的上下文窗口，怎么办？</h3>
+
+<blockquote>
+  <p>来源：唯品会一面</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“截断数据，只取前面一部分给模型。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>这是工具返回层的上下文管理问题，需要分层处理：</p>
+
+<p><strong>第一层——工具侧约束（源头治理）</strong>：</p>
+<ul>
+  <li>工具 schema 里声明 <code class="language-plaintext highlighter-rouge">max_results</code> 参数，让模型主动限制请求量</li>
+  <li>工具内部做分页或摘要，返回的不是原始数据而是经过处理的摘要版本</li>
+  <li>对于数据库查询类工具，强制 LIMIT + 只返回关键字段</li>
+</ul>
+
+<p><strong>第二层——中间层压缩（返回后处理）</strong>：</p>
+<ul>
+  <li>对工具返回做结构化摘要：保留统计信息（总数、分布）+ 典型样本</li>
+  <li>大表格转为“前 5 行 + schema 描述 + 统计特征”</li>
+  <li>大段文本用 Map-Reduce 模式压缩：先分块摘要再合并</li>
+</ul>
+
+<p><strong>第三层——多轮渐进（架构设计）</strong>：</p>
+<ul>
+  <li>第一轮只返回元信息（有多少条、大概什么分布）</li>
+  <li>模型根据任务需要决定要不要深入查看某个子集</li>
+  <li>本质上是把“一次性全量返回”变成“按需渐进获取”</li>
+</ul>
+
+<p><strong>差距在哪</strong>：新手只想到截断，但截断会丢失关键信息且模型无法判断丢了什么。高手的思路是从源头控制返回量、中间层做智能压缩、架构上支持多轮按需获取——三层递进，核心是“让模型看到足够决策的信息，而不是全量原始数据”。</p>
+
+<hr />
+
+<h2 id="q没有-mcp-之前大模型调用工具走的是什么流程mcp-本身有什么缺点或者挑战">Q：没有 MCP 之前大模型调用工具走的是什么流程？MCP 本身有什么缺点或者挑战？</h2>
+
+<blockquote>
+  <p>来源：淘天/AI Agent一面 【小得盈满一面追问：上下文膨胀、Secret 隔离与工具投毒】</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“就是 Function Calling，模型输出 JSON 然后调用工具。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p><strong>Pre-MCP 时代的工具调用流程</strong>：</p>
+
+<p>每个工具需要手写完整的适配层，链路如下：</p>
+
+<pre><code class="language-mermaid">flowchart LR
+    A["定义 JSON Schema\n（手写工具描述）"] --&gt; B["模型输出结构化 JSON\n（工具名 + 参数）"]
+    B --&gt; C["后端解析调用\n（写适配代码执行）"]
+    C --&gt; D["结果拼回上下文\n（格式化后喂给模型）"]
+</code></pre>
+
+<p>关键痛点：<strong>不同模型的 FC 格式不同</strong>——OpenAI 用 <code class="language-plaintext highlighter-rouge">tool_calls</code>、Claude 用 <code class="language-plaintext highlighter-rouge">tool_use</code>、Qwen 有自己的格式。同一个工具跨模型迁移要重写适配代码，维护成本随模型数量线性增长。</p>
+
+<p><strong>MCP 解决了什么</strong>：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>维度</th>
+      <th>Pre-MCP</th>
+      <th>MCP</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>工具定义</td>
+      <td>每个模型一套 Schema 格式</td>
+      <td>统一 JSON Schema</td>
+    </tr>
+    <tr>
+      <td>工具发现</td>
+      <td>硬编码在配置里</td>
+      <td><code class="language-plaintext highlighter-rouge">tools/list</code> 动态发现</td>
+    </tr>
+    <tr>
+      <td>传输方式</td>
+      <td>自己选 HTTP/gRPC/本地调用</td>
+      <td>标准化（stdio/SSE）</td>
+    </tr>
+    <tr>
+      <td>权限模型</td>
+      <td>自行实现</td>
+      <td>协议内置（OAuth2.1）</td>
+    </tr>
+    <tr>
+      <td>跨模型复用</td>
+      <td>每换一个模型重写适配</td>
+      <td>一次实现，所有 Agent 复用</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>MCP 的缺点/挑战（批判性视角）</strong>：</p>
+
+<ol>
+  <li><strong>上下文膨胀与选择干扰</strong>：每次连接都要走 <code class="language-plaintext highlighter-rouge">initialize → tools/list</code>。如果把工具名、说明、参数 schema 和示例全量暴露给模型，100 个工具 × 200 token/工具 = 20K token，还没开始干活就已经消耗大量上下文；候选工具越多，误选和参数混淆也越容易发生。生产环境应先按租户、权限和任务召回工具，再按需披露完整 schema</li>
+  <li><strong>无状态设计的代价</strong>：工具之间数据传递只能靠上下文中转——工具 A 的输出要传给工具 B，必须先回到模型再传出去，不能工具间直接通信</li>
+  <li><strong>鉴权边界容易被用错</strong>：协议支持认证，不代表密钥可以交给模型。CLI 或 Host 进程应持有凭证，并在传输层注入授权信息；密钥不能出现在模型上下文、工具参数、日志或工具返回中。Server 端还要按用户和租户做最小权限鉴权，不能只相信模型传入的身份字段</li>
+  <li><strong>中间层与工具投毒</strong>：社区 MCP Server、代理层或被篡改的工具描述和返回值都可能夹带提示注入，诱导模型调用高危工具或泄露数据。需要 Server 白名单、schema 版本锁定、结果净化、来源追踪和高危操作审批，不能把工具输出当成可信指令</li>
+  <li><strong>流式返回不完善</strong>：工具结果是一次性返回的，不支持 partial result，长耗时工具的用户体验差</li>
+</ol>
+
+<p><strong>差距在哪</strong>：新手只能说出“Function Calling”三个字但说不清完整链路。高手能完整对比 Pre-MCP 和 Post-MCP 的差异，且能批判性地指出 MCP 的五个现实挑战。面试官考的是对工具调用演进历史的理解深度，以及对 MCP 局限性的独立思考能力。</p>
+
+<hr />
+
+<h2 id="qmcp-返回结果支不支持流式">Q：MCP 返回结果支不支持流式？</h2>
+
+<blockquote>
+  <p>来源：淘天/AI Agent一面</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“应该支持吧，MCP 用了 SSE。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>需要区分<strong>传输层的流式</strong>和<strong>工具结果的流式</strong>——这是两件不同的事。</p>
+
+<p><strong>传输层</strong>：MCP 支持 SSE（Server-Sent Events）作为传输方式，通信管道本身是流式的。</p>
+
+<p><strong>工具调用结果（tool result）</strong>：在当前 MCP 规范中，<code class="language-plaintext highlighter-rouge">tools/call</code> 的返回是<strong>一次性返回完整结果</strong>，不支持 partial result 流式推送。</p>
+
+<p><strong>为什么这么设计</strong>：</p>
+
+<p>模型需要完整的工具返回结果才能继续推理。如果工具结果是流式的（比如只返回了前半段），模型可能“看到一半就开始生成”，导致基于不完整信息做出错误判断。这是一个<strong>正确性 vs 体验</strong>的设计取舍——MCP 选择了正确性。</p>
+
+<p><strong>长耗时工具的变通方案</strong>：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>方案</th>
+      <th>原理</th>
+      <th>适用场景</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>分阶段工具调用</td>
+      <td>把一个大任务拆成多个独立 tool call，每个阶段独立返回</td>
+      <td>可拆分的多步骤任务</td>
+    </tr>
+    <tr>
+      <td>Progress Notification</td>
+      <td>MCP 的 <code class="language-plaintext highlighter-rouge">notifications/progress</code> 通知前端执行进度（百分比/状态）</td>
+      <td>用户需要知道“还在跑”</td>
+    </tr>
+    <tr>
+      <td>异步模式</td>
+      <td>工具立即返回 <code class="language-plaintext highlighter-rouge">task_id</code>，后续轮次用另一个工具查询结果</td>
+      <td>执行时间 &gt;30s 的任务</td>
+    </tr>
+    <tr>
+      <td>Streamable HTTP</td>
+      <td>2025 年新增的传输方式，支持更灵活的流式通信</td>
+      <td>远程服务场景</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>差距在哪</strong>：新手把“传输层支持 SSE”等同于“工具结果支持流式”——混淆了两个层次。高手能区分传输层流式和应用层流式，理解 MCP 为什么选择一次性返回，以及实际项目中如何用变通方案解决长耗时问题。面试官想看你是否真正用过 MCP、理解协议设计背后的取舍。</p>
+
+<hr />
+
+<h2 id="qtool-use-sft-的训练目标是什么基座模型已经具备工具调用能力时sft-还需要学习什么">Q：Tool-use SFT 的训练目标是什么？基座模型已经具备工具调用能力时，SFT 还需要学习什么？</h2>
+
+<blockquote>
+  <p>来源：唯品会/NLP算法实习一面</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“让模型学会调用工具。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p><strong>训练目标的精确定义</strong>：</p>
+
+<p>Tool-use SFT 的训练目标不是笼统的“学会调工具”，而是让模型学会在<strong>正确时机</strong>输出<strong>正确格式</strong>的工具调用指令——包括三个子能力：</p>
+
+<ol>
+  <li><strong>选对工具</strong>：从候选工具集中选择最匹配当前意图的工具</li>
+  <li><strong>填对参数</strong>：从用户自然语言中精确提取参数并转换为目标格式</li>
+  <li><strong>判断时机</strong>：知道什么时候该调工具、什么时候不该调（直接回答更好）</li>
+</ol>
+
+<p><strong>基座已有 FC 能力时，SFT 还要学什么</strong>：</p>
+
+<p>“能调工具”和“调好工具”是两回事。基座模型的 FC 能力是通用的，SFT 要学的是<strong>业务特化</strong>：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>学习目标</th>
+      <th>基座模型的现状</th>
+      <th>SFT 需要补的</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>领域适配</td>
+      <td>认识通用工具名（search、get）</td>
+      <td>学习你的业务工具语义（<code class="language-plaintext highlighter-rouge">get_order_status</code> 不是 <code class="language-plaintext highlighter-rouge">search</code>）</td>
+    </tr>
+    <tr>
+      <td>调用策略</td>
+      <td>倾向于逐个串行调用</td>
+      <td>学习何时该并行调用、何时不调用直接回答</td>
+    </tr>
+    <tr>
+      <td>参数推理</td>
+      <td>用户说“查昨天的单”可能不会转换日期</td>
+      <td>从模糊表述中精确提取参数（date=2026-07-21）</td>
+    </tr>
+    <tr>
+      <td>格式对齐</td>
+      <td>训练时学的是 OpenAI 格式</td>
+      <td>对齐你的系统要求的 JSON Schema 格式</td>
+    </tr>
+    <tr>
+      <td>错误处理</td>
+      <td>工具报错时可能重复调用</td>
+      <td>学习错误时的应对模式（重试、换工具、问用户）</td>
+    </tr>
+    <tr>
+      <td>拒绝调用</td>
+      <td>对所有 query 都倾向调工具</td>
+      <td>学习“这个问题不需要工具，直接回答”</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>SFT 数据构造的关键</strong>：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>训练数据必须覆盖四类场景：
+  1. 正常调用：用户意图明确 → 选对工具 + 填对参数
+  2. 拒绝调用：用户问题不需要工具 → 直接回答
+  3. 多工具串联：复杂任务 → 正确的调用顺序和依赖关系
+  4. 错误恢复：工具返回错误 → 修正参数重试 or 换工具 or 告知用户
+</code></pre></div></div>
+
+<p><strong>差距在哪</strong>：新手把 SFT 目标简化为“学会调工具”——这只对完全没有 FC 能力的模型成立。高手理解当基座已有通用 FC 能力时，SFT 的真正价值在于领域适配、策略优化和边界学习。面试官考的是对 SFT 和 base model 能力边界的理解——“能调工具”和“调好工具”是两回事。</p>
+
+<hr />
+
+<h2 id="q如何不用多智能体方案让-1000-个-tools-正常工作">Q：如何不用多智能体方案让 1000 个 Tools 正常工作？</h2>
+
+<blockquote>
+  <p>来源：AI应用开发进阶面</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“分层加载，只加载需要的工具。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>方向对了，但“分层加载”只是一个概念，关键是<strong>怎么实现精准的工具路由，让 1000 个工具在单 Agent 下高效工作</strong>。</p>
+
+<p><strong>完整分层方案</strong>：</p>
+
+<pre><code class="language-mermaid">flowchart TB
+    A["用户 Query"] --&gt; B["工具索引层\n1000 个工具 × 20 token\n= 20K token 的轻量索引"]
+    B --&gt; C["意图路由层\nEmbedding 相似度 + 规则\n选出 Top-5 候选"]
+    C --&gt; D["Schema 按需加载\n只把 Top-5 的完整 Schema\n注入上下文（5×400=2K token）"]
+    D --&gt; E["模型决策\n从 5 个工具中选择\n并填充参数"]
+</code></pre>
+
+<p><strong>六层工程设计</strong>：</p>
+
+<ol>
+  <li>
+    <p><strong>工具索引层</strong>：所有工具只保留 <code class="language-plaintext highlighter-rouge">name + 一句话描述</code>（每个约 20 token），1000 个共 20K token，能塞进上下文作为“工具目录”</p>
+  </li>
+  <li>
+    <p><strong>意图路由</strong>：用户 query → 轻量分类器（可以是 embedding 相似度 + 规则）→ 选出 Top-5 候选工具。这步不用大模型，延迟 &lt;50ms</p>
+  </li>
+  <li>
+    <p><strong>Schema 按需加载</strong>：只把 Top-5 的完整 JSON Schema 注入上下文（5 × 400 = 2000 token），而非全量 1000 个工具的 Schema</p>
+  </li>
+  <li>
+    <p><strong>工具分域</strong>：按业务领域（订单/支付/物流/用户）建索引，路由先确定领域再在域内选工具，两级漏斗大幅缩小搜索空间</p>
+  </li>
+  <li>
+    <p><strong>工具别名 + 语义增强</strong>：给每个工具补充 synonyms 和 example queries（“查快递” → 物流查询工具），提升路由命中率</p>
+  </li>
+  <li>
+    <p><strong>缓存热点工具</strong>：统计调用频次，Top-20 热点工具常驻 system prompt，覆盖 80% 的日常请求</p>
+  </li>
+</ol>
+
+<p><strong>关键指标</strong>：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>指标</th>
+      <th>目标值</th>
+      <th>意义</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>路由准确率</td>
+      <td>&gt; 95%</td>
+      <td>Top-5 中包含正确工具的比例</td>
+    </tr>
+    <tr>
+      <td>上下文节省</td>
+      <td>&gt; 90%</td>
+      <td>相比全量加载节省的 token</td>
+    </tr>
+    <tr>
+      <td>路由延迟</td>
+      <td>&lt; 100ms</td>
+      <td>不能让路由成为瓶颈</td>
+    </tr>
+    <tr>
+      <td>冷门工具召回率</td>
+      <td>&gt; 85%</td>
+      <td>低频工具不能被热门工具挤掉</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>差距在哪</strong>：新手只说了“分层加载”的概念。高手给出了从索引层、路由层、加载层、分域策略、语义增强到热点缓存的完整六层方案，且有量化指标。面试官考的是在单 Agent 限制下如何用工程手段解决规模问题——不是所有问题都需要 multi-agent。</p>
+
+<hr />
+
+<h2 id="q一个-agent-如何同时连接多个-mcp-server并保证用户与会话隔离">Q：一个 Agent 如何同时连接多个 MCP Server，并保证用户与会话隔离？</h2>
+
+<blockquote>
+  <p>来源：百度/秋招后端一面【补充：AI 面经中的 MCP 用户身份追问】</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“配置多个 MCP 地址，模型需要哪个工具就调用哪个。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>Host 启动时为每个 MCP Server 建立独立 Client 会话，完成能力发现后，把工具规范化为带命名空间的注册表，例如 <code class="language-plaintext highlighter-rouge">calendar.create_event</code>、<code class="language-plaintext highlighter-rouge">crm.create_lead</code>，避免同名冲突。路由器先按租户、权限和任务召回允许暴露的工具子集，再交给模型选择。</p>
+
+<p>用户身份不能靠 IP 推断。Host 应把已认证用户映射为短期、最小权限的凭证，通过 MCP transport 的认证头或受控上下文传递；Server 端仍要独立鉴权，不能相信模型参数里的 <code class="language-plaintext highlighter-rouge">user_id</code>。会话状态按 <code class="language-plaintext highlighter-rouge">tenant_id + user_id + session_id + server_id</code> 隔离，并设置过期与撤销机制。</p>
+
+<p>还要处理四类工程问题：Server 健康检查与熔断、工具 schema 版本漂移、跨 Server 调用的超时预算，以及敏感工具的人工审批。多个 MCP 是能力联合，不等于把所有工具无条件塞进上下文。</p>
+
+<p><strong>差距在哪</strong>：新手只会“多配几个地址”，高手能讲清命名空间、能力发现、动态披露、身份传递和 Server 端二次鉴权。面试官考的是多 MCP 场景的协议与安全边界。</p>
+
+<hr />
+
+<h2 id="qcliskill-和-sub-agent-应该如何划分职责cli-直接调用-llm-与-skill-拉起-sub-agent-有什么差异">Q：CLI、Skill 和 sub-agent 应该如何划分职责？CLI 直接调用 LLM 与 Skill 拉起 sub-agent 有什么差异？</h2>
+
+<blockquote>
+  <p>来源：小得盈满 / AI 相关岗位 / 一面</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“CLI 负责执行命令，Skill 写提示词，复杂任务就多拉几个 sub-agent。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>先区分三者的职责，而不是把它们都当成“调用模型的入口”：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>组件</th>
+      <th>核心职责</th>
+      <th>不应该承担的职责</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>CLI / Host</td>
+      <td>接收确定参数、鉴权、调用模型或外部程序、校验结果、重试与记录 trace</td>
+      <td>不把密钥交给模型，也不让自然语言直接绕过参数和权限校验</td>
+    </tr>
+    <tr>
+      <td>Skill</td>
+      <td>固化可复用的任务规范，包括步骤、输入输出契约、工具选择规则和质量门禁</td>
+      <td>不持有凭证，不充当长期运行的调度器，也不因为步骤多就默认拆 Agent</td>
+    </tr>
+    <tr>
+      <td>sub-agent</td>
+      <td>在独立上下文中完成可独立验收的推理子任务，并返回结构化结果</td>
+      <td>不共享无限权限，不自行扩大任务范围，也不直接提交不可逆副作用</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>CLI 直接调用 LLM 和 Skill 拉起 sub-agent 的取舍，要从五个维度判断：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>维度</th>
+      <th>CLI 直接调用 LLM</th>
+      <th>Skill 拉起 sub-agent</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>确定性</td>
+      <td>调用链短，参数、模型、提示词、超时和输出 schema 都能固定，结果更容易复现</td>
+      <td>多一次任务转述和自主规划，路由、上下文裁剪及工具选择都会引入随机性</td>
+    </tr>
+    <tr>
+      <td>稳定性</td>
+      <td>失败面少，适合门禁、格式转换、单次评测等固定流程</td>
+      <td>适合探索性强、上下文需隔离的任务，但要处理子 Agent 超时、跑偏、重试和部分失败</td>
+    </tr>
+    <tr>
+      <td>安全与密钥隔离</td>
+      <td>CLI 进程持有短期凭证，在模型调用或传输层注入授权；模型上下文、参数、日志和返回值都不出现密钥</td>
+      <td>每个 sub-agent 只拿任务所需工具和最小权限，不能继承父 Agent 的全部凭证；有副作用的操作仍回到受控执行层审批</td>
+    </tr>
+    <tr>
+      <td>可观测性</td>
+      <td>一条 trace 就能关联输入、模型版本、工具调用、退出码和产物</td>
+      <td>必须传播 <code class="language-plaintext highlighter-rouge">trace_id</code>、<code class="language-plaintext highlighter-rouge">task_id</code> 和父子关系，并记录委派理由、上下文版本、工具调用与合并结果</td>
+    </tr>
+    <tr>
+      <td>成本</td>
+      <td>少一次规划和上下文复制，token、延迟与失败重试成本更低</td>
+      <td>并行可以缩短墙钟时间，但会增加提示词复制、协调、汇总和冲突处理成本</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>我的默认决策是：<strong>固定步骤、强约束、需要凭证或会产生副作用的流程放在 CLI / Host；可复用的方法论写进 Skill；只有子任务能独立验收、确实受益于上下文隔离或并行、且值得额外成本时才启动 sub-agent。</strong> 即使由 Skill 发起 sub-agent，也要让 CLI / Host 保留权限校验、预算、超时、审计和最终提交权。</p>
+
+<p><strong>差距在哪</strong>：新手按“命令、提示词、多个模型”给组件贴标签。高手按控制面、知识规范和推理执行单元划边界，并能从确定性、稳定性、安全、可观测性和成本解释为什么门禁类任务通常偏向 CLI 直调，而开放式评审才可能值得委派给 sub-agent。</p>
+
+<hr />
+
+<h2 id="qagent-调用启动较慢的外部工具时如何设计异步任务和结果回调">Q：Agent 调用启动较慢的外部工具时，如何设计异步任务和结果回调？</h2>
+
+<blockquote>
+  <p>来源：途游 Agent 二面（2026-08-18）</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“开一个异步线程等待工具完成，完成后通知 Agent。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>先把工具调用建模为持久任务，而不是占住模型请求或 Web 线程等待。提交阶段生成 <code class="language-plaintext highlighter-rouge">task_id</code> 和幂等键，记录租户、调用参数摘要、deadline、回调地址与状态版本；工具服务异步启动并执行，状态通过消息队列、Webhook 或事件流回传。编排器收到事件后用 <code class="language-plaintext highlighter-rouge">task_id + event_id</code> 去重，校验任务版本和剩余预算，再恢复对应 checkpoint。</p>
+
+<p>客户端可以先收到“已受理 + 进度事件”，不必保持原始请求。超时后应取消或隔离迟到结果；工具不支持取消时，至少用 fencing token 防止旧任务回写覆盖新状态。重试只用于幂等、可恢复错误，并设置退避、上限和死信队列。模型负责根据结构化结果决定下一步，任务可靠性由编排器保证。</p>
+
+<p><strong>差距在哪</strong>：新手把异步等同于线程，高手给出了任务账本、事件协议、幂等、超时和恢复边界。面试官考的是能否把慢工具接入可恢复的分布式工作流。</p>
+
+<hr />
+
+<h2 id="q跨平台工具授权即将过期时agent-如何调整调用顺序并安全续权">Q：跨平台工具授权即将过期时，Agent 如何调整调用顺序并安全续权？</h2>
+
+<blockquote>
+  <p>来源：TikTok Agent 工程师面试（2026-08-18）</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“Token 快过期就刷新，然后继续调用。”</p>
+
+<p><strong>高手答</strong>：规划器要把授权有效期、scope、刷新能力和副作用纳入工具元数据。先执行强依赖且耗时可控的授权步骤；不足以覆盖剩余链路时，在调用前续权或暂停请求用户确认。刷新凭据只由工具网关持有，模型不接触秘密；续权失败后不得重放已完成副作用，需根据 checkpoint 查询状态、换只读方案或转人工。</p>
+
+<p><strong>差距在哪</strong>：新手只处理 HTTP 401，高手把授权生命周期放进任务规划和恢复协议。</p>
+
+<hr />
+
+<h2 id="qmcp-工具治理为什么需要审计应该审计哪些证据">Q：MCP 工具治理为什么需要审计？应该审计哪些证据？</h2>
+
+<blockquote>
+  <p>来源：拓竹 AI Agent 算法一面（2026-08-18）</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“记录谁调用了哪个 MCP 工具和参数。”</p>
+
+<p><strong>高手答</strong>：审计链应关联真实用户、Agent/run、Server 身份与版本、工具 schema、授权 scope、规范化参数、策略判定、结果摘要、外部副作用和审批证据。敏感内容脱敏但保留哈希与可验证引用；读写、高风险和跨租户调用使用不同保留期与告警。审计日志写入不可由模型修改的存储，并支持从业务对象反查调用链。</p>
+
+<p><strong>差距在哪</strong>：新手做访问日志，高手建立责任归属、供应链版本和副作用证据链。</p>
+
+<hr />
+
+<h2 id="qtool-result-回写模型时消息契约应该包含哪些字段">Q：Tool Result 回写模型时，消息契约应该包含哪些字段？</h2>
+
+<blockquote>
+  <p>来源：Newegg 一面（2026-08-22）</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“返回 call_id 和工具执行结果。”</p>
+
+<p><strong>高手答</strong>：至少包含稳定 <code class="language-plaintext highlighter-rouge">call_id</code>、工具/版本、状态、结构化 payload、错误分类、是否可重试、副作用状态、证据引用、截断/分页信息和耗时。结果与原调用一一对应，并区分“执行成功但业务失败”“状态未知”和“部分完成”。大结果落对象存储，只回摘要与受权引用；模型可见错误不得泄露内部堆栈和秘密。</p>
+
+<p><strong>差距在哪</strong>：新手能串起协议，高手让结果可恢复、可审计且语义无歧义。</p>
+
+<hr />
+
+<h2 id="q如何评测-mcp-server--tool-自身的契约可用性和效果并用轨迹-badcase-持续迭代">Q：如何评测 MCP Server / Tool 自身的契约、可用性和效果，并用轨迹 Badcase 持续迭代？</h2>
+
+<blockquote>
+  <p>来源：阿里控股 Agent Infra 暑期一面（2026-04-07）</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“用 MCP Inspector 调通工具，再统计调用成功率和延迟；失败样本拿来改 Tool Description。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>先把“工具是否合格”和“模型是否会用工具”拆开。Server/Tool 单体评测使用固定请求或确定性调用器，避免把模型选错工具归咎于实现；端到端评测再让 Agent 参与，验证描述、选择和结果利用。两层共享同一工具版本和 trace，才能定位首个失败点。</p>
+
+<p>单体评测建立分层门禁：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>层级</th>
+      <th>测试内容</th>
+      <th>关键指标</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>协议契约</td>
+      <td>初始化与能力发现、<code class="language-plaintext highlighter-rouge">tools/list</code>、输入/输出 schema、错误对象、取消和版本兼容</td>
+      <td>schema 通过率、兼容性失败数</td>
+    </tr>
+    <tr>
+      <td>功能语义</td>
+      <td>黄金输入、边界值、非法参数、权限不足、幂等重放、部分失败和副作用对账</td>
+      <td>结果正确率、错误分类准确率、重复副作用数</td>
+    </tr>
+    <tr>
+      <td>可用性</td>
+      <td>冷启动、并发、超时、断连、重连、限流、依赖故障和资源泄漏</td>
+      <td>成功率、P50/P95/P99、超时率、容量和恢复时间</td>
+    </tr>
+    <tr>
+      <td>安全治理</td>
+      <td>身份与 scope、跨租户、Secret 泄漏、恶意参数、工具结果提示注入和审计完整性</td>
+      <td>越权率、泄漏数、审计覆盖率</td>
+    </tr>
+    <tr>
+      <td>Agent 效果</td>
+      <td>正/负/歧义请求、多工具相似候选、返回结果能否支撑最终答案</td>
+      <td>Tool Precision/Recall、参数正确率、任务成功率和效用增量</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>“效果”要做对照实验：固定任务分别运行无该 Tool、旧版本和候选版本；不仅看调用率，还看它是否提升最终成功率、证据质量，并控制延迟、Token、外部费用和副作用风险。对随机或实时结果使用不变量、范围和 metamorphic test，而不是要求字面完全一致；会写数据的 Tool 在隔离环境中测试，并以业务状态对账作为 oracle。</p>
+
+<p>轨迹回流先做首错点归因：能力发现失败、描述误导、选错 Tool、参数构造、Server 执行、结果契约、Observation 未被模型使用，还是下游推理错误。Badcase 脱敏后保留输入、候选工具、schema/Server/模型版本、调用参数、结果摘要、时序和人工标签；聚类后转成最小可复现用例，分别进入契约集、语义回归集或 Agent 路由集。修复应对症：改 schema/实现、Tool Description、路由样本或恢复策略，而不是所有失败都靠改 Prompt。</p>
+
+<p>发布时对旧版和候选版跑同一不可变回归集，再做 shadow 和按租户灰度；严重越权、重复副作用和契约破坏是一票否决，质量、延迟与成本采用分层阈值。每个 Badcase 绑定修复版本与回归用例，持续监控线上分布漂移和长尾工具覆盖率，防止只把热门工具越测越好。</p>
+
+<p><strong>差距在哪</strong>：新手把“能调通”当成“工具可用”，高手分离协议、功能、SLO、安全和 Agent 效用，用首错点归因把轨迹 Badcase 变成可复现回归门禁。面试官考的是能否把 MCP 工具生态做成持续交付的基础设施。</p>
+
+<hr />
+
+<h2 id="这类题的答题模式">这类题的答题模式</h2>
+
+<p>工具管理题的核心是<strong>防御性思维</strong>：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>1. 不信任模型的输出——总会有瞎传参数的时候
+2. 分层防御——Prompt 引导 + 格式校验 + 业务兜底
+3. 大规模工具管理用检索思路——召回 + 排序，不要全塞给模型
+4. 每一层都要有明确的兜底策略
+</code></pre></div></div>
+
+<p>面试官听到“加强 Prompt”就知道你只在 Demo 层面做过。听到 Pydantic 校验、业务接口校验、工具向量库检索，才会觉得你做过真实系统。</p>
+
+<p>下一篇建议继续看：</p>
+
+<ul>
+  <li><a href="../03-fault-tolerance/index.html">容错与鲁棒性：超时、报错、误操作的工程化处理</a></li>
+</ul>
+
+                <!-- Article Feedback -->
+                <div class="article-feedback" id="article-feedback">
+                    <span class="feedback-label">这篇文章有帮助吗？</span>
+                    <div class="feedback-btns">
+                        <button class="reaction-btn" id="btn-like" type="button" aria-label="点赞">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
+                            <span class="reaction-count" id="like-count">0</span>
+                        </button>
+                        <button class="reaction-btn" id="btn-dislike" type="button" aria-label="点踩">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3H10z"/><path d="M17 2h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3"/></svg>
+                            <span class="reaction-count" id="dislike-count">0</span>
+                        </button>
+                    </div>
+                    <span class="feedback-sep">|</span>
+                    <a class="feedback-comment" id="feedback-comment" href="#" target="_blank" rel="noopener">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                        GitHub 留言
+                    </a>
+                </div>
+                <!-- Prev / Next pager -->
+                <nav class="doc-pager" aria-label="章节导航">
+                    <a class="pager-btn pager-prev" id="pager-prev" href="#">
+                        <span class="pager-label">← 上一篇</span>
+                        <span class="pager-title" id="pager-prev-title"></span>
+                    </a>
+                    <a class="pager-btn pager-next" id="pager-next" href="#">
+                        <span class="pager-label">下一篇 →</span>
+                        <span class="pager-title" id="pager-next-title"></span>
+                    </a>
+                </nav>
+            </article>
+
+            <!-- Right: TOC -->
+            <nav class="doc-toc" id="doc-toc">
+                <p class="toc-label">本页目录</p>
+                <div id="toc-list"></div>
+            </nav>
+        </main>
+
+        <footer class="doc-footer">
+            <div class="doc-footer-inner">
+                <span class="footer-desc">Zero2Agent · static docs architecture · Built for learning Agent development from zero to project.</span>
+                <span id="busuanzi_container_site_uv" class="footer-counter" style="display:none">
+                    👤 你是第 <span id="busuanzi_value_site_uv" class="cv"></span> 位读者
+                </span>
+                <span id="busuanzi_container_page_pv" class="footer-counter" style="display:none">
+                    📖 本文 <span id="busuanzi_value_page_pv" class="cv"></span> 次阅读
+                </span>
+                <div class="footer-links">
+                    <a href="https://onefly.top" target="_blank" rel="noopener" class="footer-link">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
+                            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                        </svg>
+                        Onefly
+                    </a>
+                    <a href="https://github.com/ranxi2001/zero2Agent" target="_blank" rel="noopener" class="footer-link">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.522 2 12 2z"/>
+                        </svg>
+                        GitHub
+                    </a>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Back to top button -->
+    <button class="back-to-top" id="back-to-top" aria-label="回到顶部" title="回到顶部">🚀</button>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script>
+        // Prevent hljs from processing mermaid code blocks
+        document.querySelectorAll('.language-mermaid code, code.language-mermaid').forEach(function(el) {
+            el.classList.add('nohighlight');
+        });
+        hljs.highlightAll();
+    </script>
+    <!-- Transform kramdown mermaid code blocks and render -->
+    <script>
+        (function () {
+            function srcToInnerHTML(src) {
+                return src
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/&lt;br\s*\/?&gt;/gi, '<br/>');
+            }
+
+            document.querySelectorAll('.language-mermaid').forEach(function(wrapper) {
+                var code = wrapper.querySelector('code') || wrapper;
+                var src = code.textContent;
+                var div = document.createElement('div');
+                div.className = 'mermaid';
+                div.dataset.mermaidSrc = src;
+                div.innerHTML = srcToInnerHTML(src);
+                wrapper.parentNode.replaceChild(div, wrapper);
+            });
+
+            var els = document.querySelectorAll('.mermaid');
+            if (els.length > 0) mermaid.init(undefined, els);
+        })();
+    </script>
+    <!-- Flat nav list for prev/next pager -->
+    <script>
+        window.Z2A_BASE = "";
+        window.Z2A_REACTIONS_API = "https://zero2pm-reactions.ranxi169.workers.dev";
+        window.Z2A_NAV = [{"path":"learn-agent-basic/01-what-is-an-agent","title":"什么是 Agent"},{"path":"learn-agent-basic/02-workflow-vs-agent","title":"Workflow 和 Agent 的区别"},{"path":"learn-agent-basic/03-core-components","title":"一个 Agent 系统的核心组成"},{"path":"learn-agent-basic/04-why-agent-demos-break","title":"为什么很多 Agent Demo 一落地就不稳定"},{"path":"learn-agent-basic/05-tool-calling-basics","title":"大模型 API 输入输出与 Tool Calling"},{"path":"learn-agent-basic/06-memory-patterns","title":"Context、State 与 Memory"},{"path":"learn-agent-basic/07-planning-reflection-rag","title":"Planning、Reflection、RAG 分别解决什么问题"},{"path":"learn-agent-basic/08-single-vs-multi-agent","title":"单 Agent 和多 Agent 的边界"},{"path":"learn-agent-basic/09-agent-infra","title":"Agent Infra：从 Harness 到生产环境"},{"path":"learn-agent-basic/10-loop-engineering","title":"Loop Engineering：让 Agent 自主迭代直到正确"},{"path":"learn-agent-basic/11-agent-evaluation","title":"Agent 评估：怎么知道你的 Agent 好不好"},{"path":"learn-agent-basic/12-coding-agent-patterns","title":"Coding Agent：最成功的 Agent 落地形态"},{"path":"learn-agent-basic/13-context-engineering","title":"Context Engineering：系统化设计模型输入"},{"path":"learn-agent-basic/14-multimodal-realtime","title":"多模态与实时交互 Agent"},{"path":"learn-agent-basic/15-agent-self-evolution","title":"Agent 自进化：不改权重也能持续变强"},{"path":"learn-agent-basic/16-advanced-rag-memory","title":"高级 RAG 与记忆架构"},{"path":"learn-agent-basic/17-async-event-driven","title":"异步 Agent 与事件驱动架构"},{"path":"learn-langgraph/01-what-is-langgraph","title":"LangGraph 是什么，为什么不用链式调用"},{"path":"learn-langgraph/02-state-node-graph","title":"State、Node、Graph 三件套"},{"path":"learn-langgraph/03-sequential-graph","title":"顺序图：第一个可运行的 Workflow"},{"path":"learn-langgraph/04-conditional-edges","title":"条件分支：add_conditional_edges"},{"path":"learn-langgraph/05-parallel-workflows","title":"并行执行：Fan-out / Fan-in"},{"path":"learn-langgraph/06-prompt-chaining","title":"Prompt Chaining：分步生成"},{"path":"learn-langgraph/07-llm-integration","title":"接入 LLM：OpenAI 与 HuggingFace"},{"path":"learn-sdk-frameworks/01-openai-agents-sdk","title":"OpenAI Agents SDK：Agent、Tool、Handoff"},{"path":"learn-sdk-frameworks/02-google-gemini-sdk","title":"Google genai SDK：Gemini + Vertex AI 多模型"},{"path":"learn-sdk-frameworks/03-claude-anthropic-sdk","title":"Claude Anthropic SDK：Messages API 与 Tool Use"},{"path":"learn-sdk-frameworks/04-sdk-comparison","title":"三大 SDK 横向对比：怎么选"},{"path":"learn-agent-survey/01-agentscope","title":"AgentScope：阿里的多 Agent 框架"},{"path":"learn-agent-survey/02-mastra","title":"Mastra：TypeScript 原生 Agent 框架"},{"path":"learn-agent-survey/03-semantic-kernel","title":"Semantic Kernel：微软的企业级 AI SDK"},{"path":"learn-agent-survey/04-eino","title":"Eino：字节跳动的 Go 语言 Agent 框架"},{"path":"learn-agent-survey/05-gitagent","title":"GitAgent：代码仓库智能操作"},{"path":"learn-agent-survey/06-harness","title":"手搓 Agent：从原理到实现"},{"path":"learn-agent-survey/07-agentuniverse","title":"AgentUniverse：华为的企业级 Agent 平台"},{"path":"learn-agent-survey/08-deerflow","title":"DeerFlow：字节跳动的 Deep Research 框架"},{"path":"learn-agent-survey/09-langchain","title":"LangChain：最流行的 LLM 框架"},{"path":"learn-agent-survey/10-google-adk","title":"Google ADK：官方 Agent 开发套件"},{"path":"learn-agent-survey/11-skills-claudecode","title":"Skills + Claude Code：模块化技能系统"},{"path":"learn-agent-survey/12-vercel-ai-sdk","title":"Vercel AI SDK：全栈 AI 应用框架"},{"path":"learn-agent-survey/13-autogen","title":"AutoGen：微软的多 Agent 对话框架"},{"path":"learn-openclaw/01-core-idea","title":"为什么要自己写 Agent"},{"path":"learn-openclaw/02-node-to-agent","title":"Agent Loop：EventStream 核心循环"},{"path":"learn-openclaw/03-rag","title":"RAG：检索增强工程实现"},{"path":"learn-openclaw/04-tools","title":"工具系统：MCP 与并行执行"},{"path":"learn-openclaw/05-memory","title":"Context Engine：记忆架构"},{"path":"learn-openclaw/06-multi-agent","title":"Multi-Agent：隔离与路由"},{"path":"learn-openclaw/07-pi-mono","title":"读懂 pi-mono 源码"},{"path":"learn-openclaw/08-build-openclaw","title":"构建你的 OpenClaw"},{"path":"learn-openclaw/09-interview","title":"面试与实习准备"},{"path":"learn-claude-code/01-agent-loop","title":"Agent Loop：一个循环就是一个 Agent"},{"path":"learn-claude-code/02-tool-use","title":"Tool Use：扩展模型能触达的边界"},{"path":"learn-claude-code/03-todo-write","title":"TodoWrite：让 Agent 不再迷路"},{"path":"learn-claude-code/04-subagent","title":"Subagent：上下文隔离的正确姿势"},{"path":"learn-claude-code/05-skill-loading","title":"Skill Loading：按需加载领域知识"},{"path":"learn-claude-code/06-context-compact","title":"Context Compact：三层压缩换无限会话"},{"path":"learn-claude-code/07-task-system","title":"Task System：持久化任务图"},{"path":"learn-claude-code/08-background-tasks","title":"Background Tasks：非阻塞工具执行"},{"path":"learn-claude-code/09-agent-teams","title":"Agent Teams：多 Agent 协作"},{"path":"learn-claude-code/10-team-protocols","title":"Team Protocols：结构化通信协议"},{"path":"learn-claude-code/11-autonomous-agents","title":"Autonomous Agents：自组织团队"},{"path":"learn-claude-code/12-worktree-isolation","title":"Worktree 隔离：多 Agent 并行不踩踏"},{"path":"learn-deepseek-harness/01-what-is-harness","title":"DeepSeek Harness：一切皆插件的 Agent 运行时"},{"path":"learn-deepseek-harness/02-cordis-plugin-kernel","title":"声明式与命令式：Cordis 的五个核心概念"},{"path":"learn-deepseek-harness/03-profile-bundle-patch","title":"运行中的 DSH：插件树、组合层与能力接缝"},{"path":"learn-deepseek-harness/04-llm-seam","title":"LLM 接缝：把模型差异关在适配器里"},{"path":"learn-deepseek-harness/05-agent-loop","title":"Agent Loop：控制平面如何推进任务"},{"path":"learn-deepseek-harness/06-tool-pipeline","title":"Tool Pipeline：能力为什么不能直接等于权限"},{"path":"learn-deepseek-harness/07-session-log","title":"Session Log：为什么日志就是事实源"},{"path":"learn-deepseek-harness/08-inbox-control","title":"Inbox 控制：为什么用户插话必须有自己的语义"},{"path":"learn-deepseek-harness/09-code-mode","title":"Code Mode：上下文压缩不等于安全隔离"},{"path":"learn-deepseek-harness/10-context-compaction-cost","title":"Context Compaction：把上下文当作工作集管理"},{"path":"learn-deepseek-harness/11-security-boundary","title":"安全边界：把信任放到模型之外"},{"path":"learn-deepseek-harness/12-subagent-orchestration","title":"Subagent 编排：扩展能力而不是复制 Loop"},{"path":"learn-deepseek-harness/13-runtime-surfaces","title":"Runtime Surfaces：一套运行时如何服务多个宿主"},{"path":"learn-agent-training/01-agent-sft","title":"Agent SFT 关键细节：从轨迹数据到 Loss Mask"},{"path":"learn-agent-training/02-agent-rl","title":"Agent RL 实战：用强化学习提升推理与决策质量"},{"path":"learn-agent-training/03-grpo-vs-ppo","title":"GRPO vs PPO：Agent 强化学习算法深度对比与选型"},{"path":"learn-agent-training/04-data-mix","title":"训练数据配比实战：Agent 不只吃轨迹数据"},{"path":"learn-agent-training/05-agent-eval","title":"Agent 评测：怎么衡量训练效果"},{"path":"learn-agent-training/06-train-to-deploy","title":"从 SFT 到部署：Agent 模型上线全流程"},{"path":"learn-agent-training/07-training-environment-engineering","title":"Agent 训练环境工程：从仿真沙箱到数据回流闭环"},{"path":"learn-agent-practice/01-vibe-coding-homepage","title":"从 0 开始 Vibe Coding：用 Codex 发布个人主页"},{"path":"learn-agent-practice/02-ai-coding-interview","title":"AI Coding 面试：解题流程与交付策略"},{"path":"learn-agent-practice/03-daily-dev-workflow","title":"日常开发中的 Agent 工作流"},{"path":"learn-agent-practice/04-auto-harness","title":"Auto Harness 迭代实战"},{"path":"learn-agent-practice/05-eval-driven-practice","title":"Eval-Driven Agent Practice：用评估驱动 Agent 工作流迭代"},{"path":"learn-pi/01-what-is-pi","title":"Pi 是什么：定位、架构与 Agent Loop"},{"path":"learn-pi/02-pi-ai-provider","title":"pi-ai：统一多 Provider 的适配层设计"},{"path":"learn-pi/03-extension-system","title":"扩展体系：Skill、Extension 与 Package"},{"path":"learn-pi/04-mcp-adapter","title":"Pi 为什么不内置 MCP：Adapter 与 Token 取舍"},{"path":"learn-pi/05-security-model","title":"安全模型：Project Trust、权限门禁与系统隔离"},{"path":"learn-pi/06-ecosystem","title":"生态使用：发现、审计与退出策略"},{"path":"learn-pi/07-comparison","title":"Pi vs Claude Code vs DSH：按约束选择 Harness"},{"path":"learn-pi/08-session-runtime","title":"Session Runtime：树形历史、恢复与 Compaction"},{"path":"learn-codex/01-what-is-codex","title":"Codex CLI 是什么：定位、架构与 Agent Loop"},{"path":"learn-codex/02-config-permission","title":"配置与权限系统：TOML 层级与三种审批策略"},{"path":"learn-codex/03-sandbox-security","title":"沙箱与安全模型：平台原生隔离的工程边界"},{"path":"learn-codex/04-mcp-integration","title":"MCP 深度集成：工具协议与审批边界"},{"path":"learn-codex/05-codex-sdk","title":"Codex SDK：Thread-based 编程式 Agent 接口"},{"path":"learn-codex/06-developer-experience","title":"开发者体验与生态评估"},{"path":"learn-codex/07-codex-vs-claude-code","title":"Codex vs Claude Code vs DSH"},{"path":"learn-agent-interview/01-architecture-design","title":"架构选型"},{"path":"learn-agent-interview/02-tool-management","title":"工具管理"},{"path":"learn-agent-interview/03-fault-tolerance","title":"容错与鲁棒性"},{"path":"learn-agent-interview/04-memory-context","title":"记忆与上下文"},{"path":"learn-agent-interview/05-eval-and-vision","title":"评估与全局观"},{"path":"learn-agent-interview/06-multi-agent-collab","title":"多智能体协作"},{"path":"learn-agent-interview/07-engineering-pitfalls","title":"工程化踩坑"},{"path":"learn-agent-interview/08-prompt-engineering","title":"Prompt 工程与框架原理"},{"path":"learn-agent-interview/09-rag-retrieval","title":"RAG 与检索系统"},{"path":"learn-agent-interview/10-training-and-data","title":"训练、数据与模型优化"},{"path":"learn-agent-interview/11-ai-code-testing","title":"AI 代码分析与测试"},{"path":"learn-agent-interview/12-business-ai-engineering","title":"业务 AI 工程分析"},{"path":"learn-agent-interview/13-project-deep-dive","title":"简历项目拷打"},{"path":"learn-agent-interview/14-company-preferences","title":"各公司面试偏好"},{"path":"learn-agent-interview/15-agent-concepts","title":"概念考察"},{"path":"final-project/01-prd","title":"PRD：产品需求文档"},{"path":"final-project/02-architecture","title":"系统架构设计"},{"path":"final-project/03-query-engine","title":"Query Engine 实现"},{"path":"final-project/04-tools-skills","title":"Tools & Skills 实现"},{"path":"final-project/05-knowledge-base","title":"知识库构建"},{"path":"final-project/06-context-memory","title":"Context & Memory"},{"path":"final-project/07-permission-session","title":"Permission & Session"},{"path":"final-project/08-hook-command","title":"Hook & Command"},{"path":"final-project/09-sub-agent","title":"Sub-agent 编排"},{"path":"final-project/10-stt-speech","title":"STT 集成与语音分析"},{"path":"final-project/11-deploy-demo","title":"部署与演示"},{"path":"final-project/12-web-ui","title":"Web UI 交互设计"},];
+    </script>
+    <script src="/assets/js/app.js?v=11"></script>
+    <script src="/assets/js/github-stars.js?v=1"></script>
+</body>
+
+</html>

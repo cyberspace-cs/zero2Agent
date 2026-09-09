@@ -78,7 +78,7 @@ pandoc "${INPUTS[@]}" \
     --toc-depth=2 \
     --number-sections \
     --top-level-division=chapter \
-    --no-highlight \
+    --syntax-highlighting=none \
     -V documentclass=ctexbook \
     -V geometry="margin=2.5cm" \
     -V fontsize=10pt \

@@ -1,0 +1,1984 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+        (function(){var s=localStorage.getItem('z2a-theme');var t=s||(window.matchMedia('(prefers-color-scheme:light)').matches?'light':'dark');document.documentElement.setAttribute('data-theme',t);})();
+    </script>
+    <title>Worktree 隔离：多 Agent 并行不踩踏 | zero2Agent</title>
+    <meta name="description" content="每个任务独立 Git worktree——控制平面与执行平面分离">
+    
+    <link rel="canonical" href="https://onefly.top/learn-claude-code/12-worktree-isolation/">
+    <!-- Open Graph -->
+    <meta property="og:title" content="Worktree 隔离：多 Agent 并行不踩踏">
+    <meta property="og:description" content="每个任务独立 Git worktree——控制平面与执行平面分离">
+    <meta property="og:url" content="https://onefly.top/learn-claude-code/12-worktree-isolation/">
+    <meta property="og:site_name" content="zero2Agent">
+    <meta property="og:type" content="article">
+    <meta property="og:locale" content="zh_CN">
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Worktree 隔离：多 Agent 并行不踩踏">
+    <meta name="twitter:description" content="每个任务独立 Git worktree——控制平面与执行平面分离">
+    <!-- JSON-LD structured data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Article",
+      "headline": "Worktree 隔离：多 Agent 并行不踩踏",
+      "description": "每个任务独立 Git worktree——控制平面与执行平面分离",
+      "url": "https://onefly.top/learn-claude-code/12-worktree-isolation/",
+      "publisher": {
+        "@type": "Organization",
+        "name": "zero2Agent"
+      },
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://onefly.top/learn-claude-code/12-worktree-isolation/"
+      }
+    }
+    </script>
+    <script>
+        /* file: protocol only — for local _site preview */
+        (function () {
+            if (window.location.protocol !== "file:") return;
+            var path = window.location.pathname.replace(/\\/g, "/");
+            var marker = "/_site/";
+            var idx = path.lastIndexOf(marker);
+            if (idx < 0) return;
+            var relDir = path.slice(idx + marker.length).replace(/[^/]*$/, "");
+            var depth = relDir.split("/").filter(Boolean).length;
+            document.write('<base href="' + ("../".repeat(depth) || "./") + '">');
+        })();
+    </script>
+    <link rel="icon" type="image/svg+xml" href="/assets/images/logo.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Noto+Sans+SC:wght@400;500;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/css/docs.css?v=15">
+    <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <link id="hljs-theme" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <script>if(document.documentElement.getAttribute('data-theme')==='light'){document.getElementById('hljs-theme').href='https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css';}</script>
+    <!-- Mermaid: load + configure in <head> so it's ready before body scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@9.4.3/dist/mermaid.min.js"></script>
+    <script>
+        (function(){
+            var isLight = document.documentElement.getAttribute('data-theme') === 'light';
+            var darkVars = {
+                background: '#0a0a10', primaryColor: '#1a2535',
+                primaryTextColor: '#d1d5db', primaryBorderColor: '#334155',
+                lineColor: '#10b981', secondaryColor: '#161e2e',
+                tertiaryColor: '#161e2e', edgeLabelBackground: '#0d0d12',
+                clusterBkg: '#13131f'
+            };
+            var lightVars = {
+                background: '#ffffff', primaryColor: '#dbeafe',
+                primaryTextColor: '#1a1a2e', primaryBorderColor: '#93c5fd',
+                lineColor: '#059669', secondaryColor: '#f0fdf4',
+                tertiaryColor: '#ecfdf5', edgeLabelBackground: '#ffffff',
+                clusterBkg: '#f8fafc'
+            };
+            mermaid.initialize({
+                startOnLoad: false,
+                securityLevel: 'loose',
+                theme: isLight ? 'default' : 'dark',
+                themeVariables: Object.assign(isLight ? lightVars : darkVars, {
+                    fontFamily: '"Noto Sans SC", "Inter", sans-serif',
+                    fontSize: '14px'
+                }),
+                flowchart: { curve: 'basis', htmlLabels: false, padding: 16 },
+                sequence: {
+                    actorFontFamily: '"Noto Sans SC", sans-serif',
+                    messageFontFamily: '"Noto Sans SC", sans-serif',
+                },
+            });
+        })();
+    </script>
+</head>
+
+<body>
+    <div class="site-shell">
+        <header class="doc-header">
+            <div class="doc-header-inner">
+                <a href="/" class="brand">
+                    <img src="/assets/images/logo.svg" alt="Zero2Agent logo" class="brand-logo">
+                    <span class="brand-text">Zero2Agent</span>
+                </a>
+                <nav class="doc-nav">
+                    
+                    <a href="/learn-agent-basic/index.html"
+                       
+                       title="Agent Basic">
+                        Basic
+                    </a>
+                    
+                    <a href="/learn-langgraph/index.html"
+                       
+                       title="LangGraph">
+                        LangGraph
+                    </a>
+                    
+                    <a href="/learn-sdk-frameworks/index.html"
+                       
+                       title="SDK 框架">
+                        SDK
+                    </a>
+                    
+                    <a href="/learn-agent-survey/index.html"
+                       
+                       title="框架调研">
+                        Survey
+                    </a>
+                    
+                    <a href="/learn-openclaw/index.html"
+                       
+                       title="OpenClaw Agent">
+                        OpenClaw
+                    </a>
+                    
+                    <a href="/learn-claude-code/index.html"
+                       class="is-active"
+                       title="Claude Code">
+                        Claude Code
+                    </a>
+                    
+                    <a href="/learn-deepseek-harness/index.html"
+                       
+                       title="DeepSeek Harness">
+                        DSH
+                    </a>
+                    
+                    <a href="/learn-agent-training/index.html"
+                       
+                       title="Agent 训练实战">
+                        训练实战
+                    </a>
+                    
+                    <a href="/learn-agent-practice/index.html"
+                       
+                       title="Agent 应用实战">
+                        应用实战
+                    </a>
+                    
+                    <a href="/learn-pi/index.html"
+                       
+                       title="Pi Coding Agent">
+                        Pi
+                    </a>
+                    
+                    <a href="/learn-codex/index.html"
+                       
+                       title="OpenAI Codex CLI">
+                        Codex
+                    </a>
+                    
+                    <a href="/learn-agent-interview/index.html"
+                       
+                       title="Agent 面试通关">
+                        面试通关
+                    </a>
+                    
+                    <a href="/final-project/index.html"
+                       
+                       title="Final Project">
+                        Project
+                    </a>
+                    
+                    <div class="nav-dropdown">
+                        <button class="nav-dropdown-trigger" type="button">Zero 系列 ▾</button>
+                        <div class="nav-dropdown-menu">
+                            <a href="https://onefly.top/" target="_blank" rel="noopener">zero2Agent <span>AI Agent 工程</span></a>
+                            <a href="https://onefly.top/zero2Leetcode/" target="_blank" rel="noopener">zero2Leetcode <span>算法刷题</span></a>
+                            <a href="https://onefly.top/zero2PM/" target="_blank" rel="noopener">zero2PM <span>产品经理入门</span></a>
+                            <a href="https://onefly.top/zero2DA/" target="_blank" rel="noopener">zero2DA <span>数据分析入门</span></a>
+                        </div>
+                    </div>
+                </nav>
+                <div class="header-actions">
+                    <a class="github-star-btn" href="https://github.com/ranxi2001/zero2Agent" target="_blank" rel="noopener" aria-label="在 GitHub 为 zero2Agent 点 Star">
+                        <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 .7a11.5 11.5 0 0 0-3.64 22.41c.58.11.79-.25.79-.56v-2.22c-3.22.7-3.9-1.37-3.9-1.37-.53-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.71.08-.71 1.16.08 1.78 1.2 1.78 1.2 1.03 1.77 2.71 1.26 3.37.96.1-.75.4-1.26.73-1.55-2.57-.29-5.27-1.29-5.27-5.69 0-1.26.45-2.29 1.19-3.09-.12-.29-.52-1.47.11-3.05 0 0 .97-.31 3.16 1.18a10.94 10.94 0 0 1 5.76 0c2.19-1.49 3.16-1.18 3.16-1.18.63 1.58.23 2.76.11 3.05.74.8 1.19 1.83 1.19 3.09 0 4.41-2.71 5.39-5.29 5.68.42.36.79 1.06.79 2.14v3.16c0 .31.21.68.8.56A11.5 11.5 0 0 0 12 .7Z"/></svg>
+                        <span>Star</span>
+                        <span class="github-star-count" data-github-stars aria-label="GitHub Star 数量">—</span>
+                    </a>
+                    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="切换主题" title="切换主题">
+                        <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                        <svg class="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="doc-main">
+            <!-- Left: hierarchical navigation -->
+            <aside class="doc-sidebar">
+                <p class="sidebar-label">Learning Map</p>
+                
+                <div class="nav-module">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/learn-agent-basic/index.html"
+                           class="nav-module-link">
+                            Agent Basic
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/learn-agent-basic/01-what-is-an-agent/index.html"
+                           class="nav-article">
+                            什么是 Agent
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/02-workflow-vs-agent/index.html"
+                           class="nav-article">
+                            Workflow 和 Agent 的区别
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/03-core-components/index.html"
+                           class="nav-article">
+                            一个 Agent 系统的核心组成
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/04-why-agent-demos-break/index.html"
+                           class="nav-article">
+                            为什么很多 Agent Demo 一落地就不稳定
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/05-tool-calling-basics/index.html"
+                           class="nav-article">
+                            大模型 API 输入输出与 Tool Calling
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/06-memory-patterns/index.html"
+                           class="nav-article">
+                            Context、State 与 Memory
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/07-planning-reflection-rag/index.html"
+                           class="nav-article">
+                            Planning、Reflection、RAG 分别解决什么问题
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/08-single-vs-multi-agent/index.html"
+                           class="nav-article">
+                            单 Agent 和多 Agent 的边界
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/09-agent-infra/index.html"
+                           class="nav-article">
+                            Agent Infra：从 Harness 到生产环境
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/10-loop-engineering/index.html"
+                           class="nav-article">
+                            Loop Engineering：让 Agent 自主迭代直到正确
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/11-agent-evaluation/index.html"
+                           class="nav-article">
+                            Agent 评估：怎么知道你的 Agent 好不好
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/12-coding-agent-patterns/index.html"
+                           class="nav-article">
+                            Coding Agent：最成功的 Agent 落地形态
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/13-context-engineering/index.html"
+                           class="nav-article">
+                            Context Engineering：系统化设计模型输入
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/14-multimodal-realtime/index.html"
+                           class="nav-article">
+                            多模态与实时交互 Agent
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/15-agent-self-evolution/index.html"
+                           class="nav-article">
+                            Agent 自进化：不改权重也能持续变强
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/16-advanced-rag-memory/index.html"
+                           class="nav-article">
+                            高级 RAG 与记忆架构
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/17-async-event-driven/index.html"
+                           class="nav-article">
+                            异步 Agent 与事件驱动架构
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="nav-module">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/learn-langgraph/index.html"
+                           class="nav-module-link">
+                            LangGraph
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/learn-langgraph/01-what-is-langgraph/index.html"
+                           class="nav-article">
+                            LangGraph 是什么，为什么不用链式调用
+                        </a>
+                        
+                        
+                        <a href="/learn-langgraph/02-state-node-graph/index.html"
+                           class="nav-article">
+                            State、Node、Graph 三件套
+                        </a>
+                        
+                        
+                        <a href="/learn-langgraph/03-sequential-graph/index.html"
+                           class="nav-article">
+                            顺序图：第一个可运行的 Workflow
+                        </a>
+                        
+                        
+                        <a href="/learn-langgraph/04-conditional-edges/index.html"
+                           class="nav-article">
+                            条件分支：add_conditional_edges
+                        </a>
+                        
+                        
+                        <a href="/learn-langgraph/05-parallel-workflows/index.html"
+                           class="nav-article">
+                            并行执行：Fan-out / Fan-in
+                        </a>
+                        
+                        
+                        <a href="/learn-langgraph/06-prompt-chaining/index.html"
+                           class="nav-article">
+                            Prompt Chaining：分步生成
+                        </a>
+                        
+                        
+                        <a href="/learn-langgraph/07-llm-integration/index.html"
+                           class="nav-article">
+                            接入 LLM：OpenAI 与 HuggingFace
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="nav-module">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/learn-sdk-frameworks/index.html"
+                           class="nav-module-link">
+                            SDK 框架
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/learn-sdk-frameworks/01-openai-agents-sdk/index.html"
+                           class="nav-article">
+                            OpenAI Agents SDK：Agent、Tool、Handoff
+                        </a>
+                        
+                        
+                        <a href="/learn-sdk-frameworks/02-google-gemini-sdk/index.html"
+                           class="nav-article">
+                            Google genai SDK：Gemini + Vertex AI 多模型
+                        </a>
+                        
+                        
+                        <a href="/learn-sdk-frameworks/03-claude-anthropic-sdk/index.html"
+                           class="nav-article">
+                            Claude Anthropic SDK：Messages API 与 Tool Use
+                        </a>
+                        
+                        
+                        <a href="/learn-sdk-frameworks/04-sdk-comparison/index.html"
+                           class="nav-article">
+                            三大 SDK 横向对比：怎么选
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="nav-module">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/learn-agent-survey/index.html"
+                           class="nav-module-link">
+                            框架调研
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/learn-agent-survey/01-agentscope/index.html"
+                           class="nav-article">
+                            AgentScope：阿里的多 Agent 框架
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-survey/02-mastra/index.html"
+                           class="nav-article">
+                            Mastra：TypeScript 原生 Agent 框架
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-survey/03-semantic-kernel/index.html"
+                           class="nav-article">
+                            Semantic Kernel：微软的企业级 AI SDK
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-survey/04-eino/index.html"
+                           class="nav-article">
+                            Eino：字节跳动的 Go 语言 Agent 框架
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-survey/05-gitagent/index.html"
+                           class="nav-article">
+                            GitAgent：代码仓库智能操作
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-survey/06-harness/index.html"
+                           class="nav-article">
+                            手搓 Agent：从原理到实现
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-survey/07-agentuniverse/index.html"
+                           class="nav-article">
+                            AgentUniverse：华为的企业级 Agent 平台
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-survey/08-deerflow/index.html"
+                           class="nav-article">
+                            DeerFlow：字节跳动的 Deep Research 框架
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-survey/09-langchain/index.html"
+                           class="nav-article">
+                            LangChain：最流行的 LLM 框架
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-survey/10-google-adk/index.html"
+                           class="nav-article">
+                            Google ADK：官方 Agent 开发套件
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-survey/11-skills-claudecode/index.html"
+                           class="nav-article">
+                            Skills + Claude Code：模块化技能系统
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-survey/12-vercel-ai-sdk/index.html"
+                           class="nav-article">
+                            Vercel AI SDK：全栈 AI 应用框架
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-survey/13-autogen/index.html"
+                           class="nav-article">
+                            AutoGen：微软的多 Agent 对话框架
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="nav-module">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/learn-openclaw/index.html"
+                           class="nav-module-link">
+                            OpenClaw Agent
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/learn-openclaw/01-core-idea/index.html"
+                           class="nav-article">
+                            为什么要自己写 Agent
+                        </a>
+                        
+                        
+                        <a href="/learn-openclaw/02-node-to-agent/index.html"
+                           class="nav-article">
+                            Agent Loop：EventStream 核心循环
+                        </a>
+                        
+                        
+                        <a href="/learn-openclaw/03-rag/index.html"
+                           class="nav-article">
+                            RAG：检索增强工程实现
+                        </a>
+                        
+                        
+                        <a href="/learn-openclaw/04-tools/index.html"
+                           class="nav-article">
+                            工具系统：MCP 与并行执行
+                        </a>
+                        
+                        
+                        <a href="/learn-openclaw/05-memory/index.html"
+                           class="nav-article">
+                            Context Engine：记忆架构
+                        </a>
+                        
+                        
+                        <a href="/learn-openclaw/06-multi-agent/index.html"
+                           class="nav-article">
+                            Multi-Agent：隔离与路由
+                        </a>
+                        
+                        
+                        <a href="/learn-openclaw/07-pi-mono/index.html"
+                           class="nav-article">
+                            读懂 pi-mono 源码
+                        </a>
+                        
+                        
+                        <a href="/learn-openclaw/08-build-openclaw/index.html"
+                           class="nav-article">
+                            构建你的 OpenClaw
+                        </a>
+                        
+                        
+                        <a href="/learn-openclaw/09-interview/index.html"
+                           class="nav-article">
+                            面试与实习准备
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="nav-module is-open">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/learn-claude-code/index.html"
+                           class="nav-module-link is-active">
+                            Claude Code
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/learn-claude-code/01-agent-loop/index.html"
+                           class="nav-article">
+                            Agent Loop：一个循环就是一个 Agent
+                        </a>
+                        
+                        
+                        <a href="/learn-claude-code/02-tool-use/index.html"
+                           class="nav-article">
+                            Tool Use：扩展模型能触达的边界
+                        </a>
+                        
+                        
+                        <a href="/learn-claude-code/03-todo-write/index.html"
+                           class="nav-article">
+                            TodoWrite：让 Agent 不再迷路
+                        </a>
+                        
+                        
+                        <a href="/learn-claude-code/04-subagent/index.html"
+                           class="nav-article">
+                            Subagent：上下文隔离的正确姿势
+                        </a>
+                        
+                        
+                        <a href="/learn-claude-code/05-skill-loading/index.html"
+                           class="nav-article">
+                            Skill Loading：按需加载领域知识
+                        </a>
+                        
+                        
+                        <a href="/learn-claude-code/06-context-compact/index.html"
+                           class="nav-article">
+                            Context Compact：三层压缩换无限会话
+                        </a>
+                        
+                        
+                        <a href="/learn-claude-code/07-task-system/index.html"
+                           class="nav-article">
+                            Task System：持久化任务图
+                        </a>
+                        
+                        
+                        <a href="/learn-claude-code/08-background-tasks/index.html"
+                           class="nav-article">
+                            Background Tasks：非阻塞工具执行
+                        </a>
+                        
+                        
+                        <a href="/learn-claude-code/09-agent-teams/index.html"
+                           class="nav-article">
+                            Agent Teams：多 Agent 协作
+                        </a>
+                        
+                        
+                        <a href="/learn-claude-code/10-team-protocols/index.html"
+                           class="nav-article">
+                            Team Protocols：结构化通信协议
+                        </a>
+                        
+                        
+                        <a href="/learn-claude-code/11-autonomous-agents/index.html"
+                           class="nav-article">
+                            Autonomous Agents：自组织团队
+                        </a>
+                        
+                        
+                        <a href="/learn-claude-code/12-worktree-isolation/index.html"
+                           class="nav-article is-current">
+                            Worktree 隔离：多 Agent 并行不踩踏
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="nav-module">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/learn-deepseek-harness/index.html"
+                           class="nav-module-link">
+                            DeepSeek Harness
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/learn-deepseek-harness/01-what-is-harness/index.html"
+                           class="nav-article">
+                            DeepSeek Harness：一切皆插件的 Agent 运行时
+                        </a>
+                        
+                        
+                        <a href="/learn-deepseek-harness/02-cordis-plugin-kernel/index.html"
+                           class="nav-article">
+                            声明式与命令式：Cordis 的五个核心概念
+                        </a>
+                        
+                        
+                        <a href="/learn-deepseek-harness/03-profile-bundle-patch/index.html"
+                           class="nav-article">
+                            运行中的 DSH：插件树、组合层与能力接缝
+                        </a>
+                        
+                        
+                        <a href="/learn-deepseek-harness/04-llm-seam/index.html"
+                           class="nav-article">
+                            LLM 接缝：把模型差异关在适配器里
+                        </a>
+                        
+                        
+                        <a href="/learn-deepseek-harness/05-agent-loop/index.html"
+                           class="nav-article">
+                            Agent Loop：控制平面如何推进任务
+                        </a>
+                        
+                        
+                        <a href="/learn-deepseek-harness/06-tool-pipeline/index.html"
+                           class="nav-article">
+                            Tool Pipeline：能力为什么不能直接等于权限
+                        </a>
+                        
+                        
+                        <a href="/learn-deepseek-harness/07-session-log/index.html"
+                           class="nav-article">
+                            Session Log：为什么日志就是事实源
+                        </a>
+                        
+                        
+                        <a href="/learn-deepseek-harness/08-inbox-control/index.html"
+                           class="nav-article">
+                            Inbox 控制：为什么用户插话必须有自己的语义
+                        </a>
+                        
+                        
+                        <a href="/learn-deepseek-harness/09-code-mode/index.html"
+                           class="nav-article">
+                            Code Mode：上下文压缩不等于安全隔离
+                        </a>
+                        
+                        
+                        <a href="/learn-deepseek-harness/10-context-compaction-cost/index.html"
+                           class="nav-article">
+                            Context Compaction：把上下文当作工作集管理
+                        </a>
+                        
+                        
+                        <a href="/learn-deepseek-harness/11-security-boundary/index.html"
+                           class="nav-article">
+                            安全边界：把信任放到模型之外
+                        </a>
+                        
+                        
+                        <a href="/learn-deepseek-harness/12-subagent-orchestration/index.html"
+                           class="nav-article">
+                            Subagent 编排：扩展能力而不是复制 Loop
+                        </a>
+                        
+                        
+                        <a href="/learn-deepseek-harness/13-runtime-surfaces/index.html"
+                           class="nav-article">
+                            Runtime Surfaces：一套运行时如何服务多个宿主
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="nav-module">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/learn-agent-training/index.html"
+                           class="nav-module-link">
+                            Agent 训练实战
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/learn-agent-training/01-agent-sft/index.html"
+                           class="nav-article">
+                            Agent SFT 关键细节：从轨迹数据到 Loss Mask
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-training/02-agent-rl/index.html"
+                           class="nav-article">
+                            Agent RL 实战：用强化学习提升推理与决策质量
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-training/03-grpo-vs-ppo/index.html"
+                           class="nav-article">
+                            GRPO vs PPO：Agent 强化学习算法深度对比与选型
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-training/04-data-mix/index.html"
+                           class="nav-article">
+                            训练数据配比实战：Agent 不只吃轨迹数据
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-training/05-agent-eval/index.html"
+                           class="nav-article">
+                            Agent 评测：怎么衡量训练效果
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-training/06-train-to-deploy/index.html"
+                           class="nav-article">
+                            从 SFT 到部署：Agent 模型上线全流程
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-training/07-training-environment-engineering/index.html"
+                           class="nav-article">
+                            Agent 训练环境工程：从仿真沙箱到数据回流闭环
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="nav-module">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/learn-agent-practice/index.html"
+                           class="nav-module-link">
+                            Agent 应用实战
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/learn-agent-practice/01-vibe-coding-homepage/index.html"
+                           class="nav-article">
+                            从 0 开始 Vibe Coding：用 Codex 发布个人主页
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-practice/02-ai-coding-interview/index.html"
+                           class="nav-article">
+                            AI Coding 面试：解题流程与交付策略
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-practice/03-daily-dev-workflow/index.html"
+                           class="nav-article">
+                            日常开发中的 Agent 工作流
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-practice/04-auto-harness/index.html"
+                           class="nav-article">
+                            Auto Harness 迭代实战
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-practice/05-eval-driven-practice/index.html"
+                           class="nav-article">
+                            Eval-Driven Agent Practice：用评估驱动 Agent 工作流迭代
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="nav-module">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/learn-pi/index.html"
+                           class="nav-module-link">
+                            Pi Coding Agent
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/learn-pi/01-what-is-pi/index.html"
+                           class="nav-article">
+                            Pi 是什么：定位、架构与 Agent Loop
+                        </a>
+                        
+                        
+                        <a href="/learn-pi/02-pi-ai-provider/index.html"
+                           class="nav-article">
+                            pi-ai：统一多 Provider 的适配层设计
+                        </a>
+                        
+                        
+                        <a href="/learn-pi/03-extension-system/index.html"
+                           class="nav-article">
+                            扩展体系：Skill、Extension 与 Package
+                        </a>
+                        
+                        
+                        <a href="/learn-pi/04-mcp-adapter/index.html"
+                           class="nav-article">
+                            Pi 为什么不内置 MCP：Adapter 与 Token 取舍
+                        </a>
+                        
+                        
+                        <a href="/learn-pi/05-security-model/index.html"
+                           class="nav-article">
+                            安全模型：Project Trust、权限门禁与系统隔离
+                        </a>
+                        
+                        
+                        <a href="/learn-pi/06-ecosystem/index.html"
+                           class="nav-article">
+                            生态使用：发现、审计与退出策略
+                        </a>
+                        
+                        
+                        <a href="/learn-pi/07-comparison/index.html"
+                           class="nav-article">
+                            Pi vs Claude Code vs DSH：按约束选择 Harness
+                        </a>
+                        
+                        
+                        <a href="/learn-pi/08-session-runtime/index.html"
+                           class="nav-article">
+                            Session Runtime：树形历史、恢复与 Compaction
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="nav-module">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/learn-codex/index.html"
+                           class="nav-module-link">
+                            OpenAI Codex CLI
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/learn-codex/01-what-is-codex/index.html"
+                           class="nav-article">
+                            Codex CLI 是什么：定位、架构与 Agent Loop
+                        </a>
+                        
+                        
+                        <a href="/learn-codex/02-config-permission/index.html"
+                           class="nav-article">
+                            配置与权限系统：TOML 层级与三种审批策略
+                        </a>
+                        
+                        
+                        <a href="/learn-codex/03-sandbox-security/index.html"
+                           class="nav-article">
+                            沙箱与安全模型：平台原生隔离的工程边界
+                        </a>
+                        
+                        
+                        <a href="/learn-codex/04-mcp-integration/index.html"
+                           class="nav-article">
+                            MCP 深度集成：工具协议与审批边界
+                        </a>
+                        
+                        
+                        <a href="/learn-codex/05-codex-sdk/index.html"
+                           class="nav-article">
+                            Codex SDK：Thread-based 编程式 Agent 接口
+                        </a>
+                        
+                        
+                        <a href="/learn-codex/06-developer-experience/index.html"
+                           class="nav-article">
+                            开发者体验与生态评估
+                        </a>
+                        
+                        
+                        <a href="/learn-codex/07-codex-vs-claude-code/index.html"
+                           class="nav-article">
+                            Codex vs Claude Code vs DSH
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="nav-module">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/learn-agent-interview/index.html"
+                           class="nav-module-link">
+                            Agent 面试通关
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/learn-agent-interview/01-architecture-design/index.html"
+                           class="nav-article">
+                            架构选型
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/02-tool-management/index.html"
+                           class="nav-article">
+                            工具管理
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/03-fault-tolerance/index.html"
+                           class="nav-article">
+                            容错与鲁棒性
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/04-memory-context/index.html"
+                           class="nav-article">
+                            记忆与上下文
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/05-eval-and-vision/index.html"
+                           class="nav-article">
+                            评估与全局观
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/06-multi-agent-collab/index.html"
+                           class="nav-article">
+                            多智能体协作
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/07-engineering-pitfalls/index.html"
+                           class="nav-article">
+                            工程化踩坑
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/08-prompt-engineering/index.html"
+                           class="nav-article">
+                            Prompt 工程与框架原理
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/09-rag-retrieval/index.html"
+                           class="nav-article">
+                            RAG 与检索系统
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/10-training-and-data/index.html"
+                           class="nav-article">
+                            训练、数据与模型优化
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/11-ai-code-testing/index.html"
+                           class="nav-article">
+                            AI 代码分析与测试
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/12-business-ai-engineering/index.html"
+                           class="nav-article">
+                            业务 AI 工程分析
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/13-project-deep-dive/index.html"
+                           class="nav-article">
+                            简历项目拷打
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/14-company-preferences/index.html"
+                           class="nav-article">
+                            各公司面试偏好
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/15-agent-concepts/index.html"
+                           class="nav-article">
+                            概念考察
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="nav-module">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/final-project/index.html"
+                           class="nav-module-link">
+                            Final Project
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/final-project/01-prd/index.html"
+                           class="nav-article">
+                            PRD：产品需求文档
+                        </a>
+                        
+                        
+                        <a href="/final-project/02-architecture/index.html"
+                           class="nav-article">
+                            系统架构设计
+                        </a>
+                        
+                        
+                        <a href="/final-project/03-query-engine/index.html"
+                           class="nav-article">
+                            Query Engine 实现
+                        </a>
+                        
+                        
+                        <a href="/final-project/04-tools-skills/index.html"
+                           class="nav-article">
+                            Tools & Skills 实现
+                        </a>
+                        
+                        
+                        <a href="/final-project/05-knowledge-base/index.html"
+                           class="nav-article">
+                            知识库构建
+                        </a>
+                        
+                        
+                        <a href="/final-project/06-context-memory/index.html"
+                           class="nav-article">
+                            Context & Memory
+                        </a>
+                        
+                        
+                        <a href="/final-project/07-permission-session/index.html"
+                           class="nav-article">
+                            Permission & Session
+                        </a>
+                        
+                        
+                        <a href="/final-project/08-hook-command/index.html"
+                           class="nav-article">
+                            Hook & Command
+                        </a>
+                        
+                        
+                        <a href="/final-project/09-sub-agent/index.html"
+                           class="nav-article">
+                            Sub-agent 编排
+                        </a>
+                        
+                        
+                        <a href="/final-project/10-stt-speech/index.html"
+                           class="nav-article">
+                            STT 集成与语音分析
+                        </a>
+                        
+                        
+                        <a href="/final-project/11-deploy-demo/index.html"
+                           class="nav-article">
+                            部署与演示
+                        </a>
+                        
+                        
+                        <a href="/final-project/12-web-ui/index.html"
+                           class="nav-article">
+                            Web UI 交互设计
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+            </aside>
+
+            <!-- Center: article content -->
+            <article class="doc-article">
+                
+                <p class="doc-eyebrow">Claude Code / s12</p>
+                
+                <h1 id="worktree-隔离多-agent-并行不踩踏">Worktree 隔离：多 Agent 并行不踩踏</h1>
+
+<p>多个 Agent 同时修改同一个目录会出什么问题？</p>
+
+<ul>
+  <li>Agent A 创建了 <code class="language-plaintext highlighter-rouge">temp.py</code>，Agent B 也创建了 <code class="language-plaintext highlighter-rouge">temp.py</code>，互相覆盖</li>
+  <li>Agent A 的未提交修改和 Agent B 的修改混在一起，git status 一团乱</li>
+  <li>一个 Agent 的失败导致另一个 Agent 的工作也出问题</li>
+</ul>
+
+<p>解决方案：<strong>每个任务得到一个独立的 Git worktree</strong>，物理隔离，互不干扰。</p>
+
+<hr />
+
+<h2 id="git-worktree-基础">Git Worktree 基础</h2>
+
+<p>Git worktree 让同一个仓库在多个目录中同时 checkout，每个目录有独立的工作区和 index：</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 为 task_001 创建独立 worktree</span>
+git worktree add .worktrees/task_001 <span class="nt">-b</span> task/task_001
+
+<span class="c"># 目录结构：</span>
+<span class="c"># .worktrees/</span>
+<span class="c">#   task_001/    ← 完整的仓库副本，独立工作区</span>
+<span class="c">#   task_002/    ← 另一个任务的独立空间</span>
+<span class="c"># src/           ← 主工作区，不被任务修改</span>
+</code></pre></div></div>
+
+<p>每个 worktree 指向同一个 <code class="language-plaintext highlighter-rouge">.git</code> 对象存储，但有独立的 HEAD、index 和工作文件。</p>
+
+<hr />
+
+<h2 id="源码实证enterworktreetool-的真实实现">源码实证：EnterWorktreeTool 的真实实现</h2>
+
+<p>Claude Code 的 <code class="language-plaintext highlighter-rouge">EnterWorktreeTool</code>（<code class="language-plaintext highlighter-rouge">src/tools/EnterWorktreeTool/EnterWorktreeTool.ts</code>）是进入 worktree 隔离的唯一入口。它的 <code class="language-plaintext highlighter-rouge">call()</code> 方法揭示了完整的状态切换流程：</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// EnterWorktreeTool.ts — call() 核心逻辑（简化）</span>
+
+<span class="k">async</span> <span class="nf">call</span><span class="p">(</span><span class="nx">input</span><span class="p">)</span> <span class="p">{</span>
+  <span class="c1">// 1. 防止嵌套：已经在 worktree 里就拒绝</span>
+  <span class="k">if </span><span class="p">(</span><span class="nf">getCurrentWorktreeSession</span><span class="p">())</span> <span class="p">{</span>
+    <span class="k">throw</span> <span class="k">new</span> <span class="nc">Error</span><span class="p">(</span><span class="dl">'</span><span class="s1">Already in a worktree session</span><span class="dl">'</span><span class="p">)</span>
+  <span class="p">}</span>
+
+  <span class="c1">// 2. 回到规范 git 根目录（即使从 worktree 内部调用也不会嵌套）</span>
+  <span class="kd">const</span> <span class="nx">mainRepoRoot</span> <span class="o">=</span> <span class="nf">findCanonicalGitRoot</span><span class="p">(</span><span class="nf">getCwd</span><span class="p">())</span>
+  <span class="k">if </span><span class="p">(</span><span class="nx">mainRepoRoot</span> <span class="o">&amp;&amp;</span> <span class="nx">mainRepoRoot</span> <span class="o">!==</span> <span class="nf">getCwd</span><span class="p">())</span> <span class="p">{</span>
+    <span class="nx">process</span><span class="p">.</span><span class="nf">chdir</span><span class="p">(</span><span class="nx">mainRepoRoot</span><span class="p">)</span>
+    <span class="nf">setCwd</span><span class="p">(</span><span class="nx">mainRepoRoot</span><span class="p">)</span>
+  <span class="p">}</span>
+
+  <span class="c1">// 3. 创建 worktree（路径：.claude/worktrees/&lt;slug&gt;）</span>
+  <span class="kd">const</span> <span class="nx">slug</span> <span class="o">=</span> <span class="nx">input</span><span class="p">.</span><span class="nx">name</span> <span class="o">??</span> <span class="nf">getPlanSlug</span><span class="p">()</span>
+  <span class="kd">const</span> <span class="nx">worktreeSession</span> <span class="o">=</span> <span class="k">await</span> <span class="nf">createWorktreeForSession</span><span class="p">(</span><span class="nf">getSessionId</span><span class="p">(),</span> <span class="nx">slug</span><span class="p">)</span>
+
+  <span class="c1">// 4. 切换 CWD 到 worktree</span>
+  <span class="nx">process</span><span class="p">.</span><span class="nf">chdir</span><span class="p">(</span><span class="nx">worktreeSession</span><span class="p">.</span><span class="nx">worktreePath</span><span class="p">)</span>
+  <span class="nf">setCwd</span><span class="p">(</span><span class="nx">worktreeSession</span><span class="p">.</span><span class="nx">worktreePath</span><span class="p">)</span>
+  <span class="nf">setOriginalCwd</span><span class="p">(</span><span class="nf">getCwd</span><span class="p">())</span>
+
+  <span class="c1">// 5. 关键：清空所有依赖 CWD 的缓存</span>
+  <span class="nf">clearSystemPromptSections</span><span class="p">()</span>   <span class="c1">// 系统 prompt 重新生成</span>
+  <span class="nf">clearMemoryFileCaches</span><span class="p">()</span>       <span class="c1">// CLAUDE.md 等记忆文件重新读取</span>
+  <span class="nx">getPlansDirectory</span><span class="p">.</span><span class="nx">cache</span><span class="p">.</span><span class="nx">clear</span><span class="p">?.()</span>
+
+  <span class="c1">// 6. 持久化 worktree 状态（崩溃恢复用）</span>
+  <span class="nf">saveWorktreeState</span><span class="p">(</span><span class="nx">worktreeSession</span><span class="p">)</span>
+
+  <span class="k">return</span> <span class="p">{</span>
+    <span class="na">data</span><span class="p">:</span> <span class="p">{</span>
+      <span class="na">worktreePath</span><span class="p">:</span> <span class="nx">worktreeSession</span><span class="p">.</span><span class="nx">worktreePath</span><span class="p">,</span>
+      <span class="na">worktreeBranch</span><span class="p">:</span> <span class="nx">worktreeSession</span><span class="p">.</span><span class="nx">worktreeBranch</span><span class="p">,</span>
+      <span class="na">message</span><span class="p">:</span> <span class="s2">`Created worktree at </span><span class="p">${</span><span class="nx">worktreeSession</span><span class="p">.</span><span class="nx">worktreePath</span><span class="p">}</span><span class="s2">...`</span><span class="p">,</span>
+    <span class="p">},</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p><strong>关键设计细节：</strong></p>
+
+<table>
+  <thead>
+    <tr>
+      <th>要点</th>
+      <th>实现</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Worktree 存放位置</td>
+      <td><code class="language-plaintext highlighter-rouge">.claude/worktrees/&lt;slug&gt;</code>，不是 <code class="language-plaintext highlighter-rouge">.worktrees/</code></td>
+    </tr>
+    <tr>
+      <td>Name 校验</td>
+      <td><code class="language-plaintext highlighter-rouge">validateWorktreeSlug()</code> 逐段检查，拒绝 <code class="language-plaintext highlighter-rouge">..</code> 和绝对路径，防止路径穿越</td>
+    </tr>
+    <tr>
+      <td>缓存清空</td>
+      <td>切换 CWD 后<strong>必须</strong>清空三类缓存：系统 prompt、记忆文件、plans 目录</td>
+    </tr>
+    <tr>
+      <td>防嵌套</td>
+      <td><code class="language-plaintext highlighter-rouge">getCurrentWorktreeSession()</code> 检查全局 session 状态</td>
+    </tr>
+    <tr>
+      <td>规范化</td>
+      <td><code class="language-plaintext highlighter-rouge">findCanonicalGitRoot()</code> 确保始终从主仓库根目录创建</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>输入 Schema 用 Zod 定义，<code class="language-plaintext highlighter-rouge">name</code> 是可选的，支持字母、数字、点、下划线、短横线，最长 64 字符：</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">const</span> <span class="nx">inputSchema</span> <span class="o">=</span> <span class="nx">z</span><span class="p">.</span><span class="nf">strictObject</span><span class="p">({</span>
+  <span class="na">name</span><span class="p">:</span> <span class="nx">z</span><span class="p">.</span><span class="nf">string</span><span class="p">()</span>
+    <span class="p">.</span><span class="nf">superRefine</span><span class="p">((</span><span class="nx">s</span><span class="p">,</span> <span class="nx">ctx</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+      <span class="k">try</span> <span class="p">{</span> <span class="nf">validateWorktreeSlug</span><span class="p">(</span><span class="nx">s</span><span class="p">)</span> <span class="p">}</span>
+      <span class="k">catch </span><span class="p">(</span><span class="nx">e</span><span class="p">)</span> <span class="p">{</span> <span class="nx">ctx</span><span class="p">.</span><span class="nf">addIssue</span><span class="p">({</span> <span class="na">code</span><span class="p">:</span> <span class="dl">'</span><span class="s1">custom</span><span class="dl">'</span><span class="p">,</span> <span class="na">message</span><span class="p">:</span> <span class="p">(</span><span class="nx">e</span> <span class="kd">as </span><span class="nb">Error</span><span class="p">).</span><span class="nx">message</span> <span class="p">})</span> <span class="p">}</span>
+    <span class="p">})</span>
+    <span class="p">.</span><span class="nf">optional</span><span class="p">()</span>
+    <span class="p">.</span><span class="nf">describe</span><span class="p">(</span><span class="dl">'</span><span class="s1">Optional name for the worktree...</span><span class="dl">'</span><span class="p">),</span>
+<span class="p">})</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="源码实证exitworktreetool-的安全退出">源码实证：ExitWorktreeTool 的安全退出</h2>
+
+<p><code class="language-plaintext highlighter-rouge">ExitWorktreeTool</code>（<code class="language-plaintext highlighter-rouge">src/tools/ExitWorktreeTool/ExitWorktreeTool.ts</code>）不是简单地切回目录——它实现了完整的安全检查和状态恢复。</p>
+
+<p>输入 Schema 有两个参数：</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">const</span> <span class="nx">inputSchema</span> <span class="o">=</span> <span class="nx">z</span><span class="p">.</span><span class="nf">strictObject</span><span class="p">({</span>
+  <span class="na">action</span><span class="p">:</span> <span class="nx">z</span><span class="p">.</span><span class="nf">enum</span><span class="p">([</span><span class="dl">'</span><span class="s1">keep</span><span class="dl">'</span><span class="p">,</span> <span class="dl">'</span><span class="s1">remove</span><span class="dl">'</span><span class="p">]),</span>        <span class="c1">// 保留还是删除 worktree</span>
+  <span class="na">discard_changes</span><span class="p">:</span> <span class="nx">z</span><span class="p">.</span><span class="nf">boolean</span><span class="p">().</span><span class="nf">optional</span><span class="p">(),</span>   <span class="c1">// remove 时如果有未提交变更，必须显式确认</span>
+<span class="p">})</span>
+</code></pre></div></div>
+
+<p><strong>安全门控在 <code class="language-plaintext highlighter-rouge">validateInput()</code> 里</strong>——这是 Claude Code 的 fail-closed 设计：</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">async</span> <span class="nf">validateInput</span><span class="p">(</span><span class="nx">input</span><span class="p">)</span> <span class="p">{</span>
+  <span class="c1">// 1. 作用域守卫：只操作当前 session 的 EnterWorktree 创建的 worktree</span>
+  <span class="kd">const</span> <span class="nx">session</span> <span class="o">=</span> <span class="nf">getCurrentWorktreeSession</span><span class="p">()</span>
+  <span class="k">if </span><span class="p">(</span><span class="o">!</span><span class="nx">session</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="p">{</span> <span class="na">result</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span> <span class="na">message</span><span class="p">:</span> <span class="dl">'</span><span class="s1">No-op: there is no active EnterWorktree session...</span><span class="dl">'</span> <span class="p">}</span>
+  <span class="p">}</span>
+
+  <span class="c1">// 2. remove 时检查未提交变更</span>
+  <span class="k">if </span><span class="p">(</span><span class="nx">input</span><span class="p">.</span><span class="nx">action</span> <span class="o">===</span> <span class="dl">'</span><span class="s1">remove</span><span class="dl">'</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="nx">input</span><span class="p">.</span><span class="nx">discard_changes</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">summary</span> <span class="o">=</span> <span class="k">await</span> <span class="nf">countWorktreeChanges</span><span class="p">(</span><span class="nx">session</span><span class="p">.</span><span class="nx">worktreePath</span><span class="p">,</span> <span class="nx">session</span><span class="p">.</span><span class="nx">originalHeadCommit</span><span class="p">)</span>
+    <span class="c1">// null = 无法确定状态 → fail-closed，拒绝删除</span>
+    <span class="k">if </span><span class="p">(</span><span class="nx">summary</span> <span class="o">===</span> <span class="kc">null</span><span class="p">)</span> <span class="p">{</span>
+      <span class="k">return</span> <span class="p">{</span> <span class="na">result</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span> <span class="na">message</span><span class="p">:</span> <span class="dl">'</span><span class="s1">Could not verify worktree state...</span><span class="dl">'</span> <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="k">if </span><span class="p">(</span><span class="nx">summary</span><span class="p">.</span><span class="nx">changedFiles</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="o">||</span> <span class="nx">summary</span><span class="p">.</span><span class="nx">commits</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+      <span class="k">return</span> <span class="p">{</span> <span class="na">result</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span> <span class="na">message</span><span class="p">:</span> <span class="s2">`Worktree has </span><span class="p">${</span><span class="nx">changedFiles</span><span class="p">}</span><span class="s2"> uncommitted files and </span><span class="p">${</span><span class="nx">commits</span><span class="p">}</span><span class="s2"> commits...`</span> <span class="p">}</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+  <span class="k">return</span> <span class="p">{</span> <span class="na">result</span><span class="p">:</span> <span class="kc">true</span> <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p><code class="language-plaintext highlighter-rouge">countWorktreeChanges()</code> 的 fail-closed 设计值得单独说明：</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// 返回 null 代表"无法确定"，调用方必须将 null 视为"不安全"</span>
+<span class="k">async</span> <span class="kd">function</span> <span class="nf">countWorktreeChanges</span><span class="p">(</span>
+  <span class="nx">worktreePath</span><span class="p">:</span> <span class="kr">string</span><span class="p">,</span>
+  <span class="nx">originalHeadCommit</span><span class="p">:</span> <span class="kr">string</span> <span class="o">|</span> <span class="kc">undefined</span><span class="p">,</span>
+<span class="p">):</span> <span class="nb">Promise</span><span class="o">&lt;</span><span class="nx">ChangeSummary</span> <span class="o">|</span> <span class="kc">null</span><span class="o">&gt;</span> <span class="p">{</span>
+  <span class="kd">const</span> <span class="nx">status</span> <span class="o">=</span> <span class="k">await</span> <span class="nf">execFileNoThrow</span><span class="p">(</span><span class="dl">'</span><span class="s1">git</span><span class="dl">'</span><span class="p">,</span> <span class="p">[</span><span class="dl">'</span><span class="s1">-C</span><span class="dl">'</span><span class="p">,</span> <span class="nx">worktreePath</span><span class="p">,</span> <span class="dl">'</span><span class="s1">status</span><span class="dl">'</span><span class="p">,</span> <span class="dl">'</span><span class="s1">--porcelain</span><span class="dl">'</span><span class="p">])</span>
+  <span class="k">if </span><span class="p">(</span><span class="nx">status</span><span class="p">.</span><span class="nx">code</span> <span class="o">!==</span> <span class="mi">0</span><span class="p">)</span> <span class="k">return</span> <span class="kc">null</span>       <span class="c1">// git 失败 → null</span>
+
+  <span class="k">if </span><span class="p">(</span><span class="o">!</span><span class="nx">originalHeadCommit</span><span class="p">)</span> <span class="k">return</span> <span class="kc">null</span>     <span class="c1">// 没有基线 commit → null（hook-based worktree 场景）</span>
+
+  <span class="kd">const</span> <span class="nx">revList</span> <span class="o">=</span> <span class="k">await</span> <span class="nf">execFileNoThrow</span><span class="p">(</span><span class="dl">'</span><span class="s1">git</span><span class="dl">'</span><span class="p">,</span> <span class="p">[</span><span class="dl">'</span><span class="s1">-C</span><span class="dl">'</span><span class="p">,</span> <span class="nx">worktreePath</span><span class="p">,</span> <span class="dl">'</span><span class="s1">rev-list</span><span class="dl">'</span><span class="p">,</span> <span class="dl">'</span><span class="s1">--count</span><span class="dl">'</span><span class="p">,</span> <span class="s2">`</span><span class="p">${</span><span class="nx">originalHeadCommit</span><span class="p">}</span><span class="s2">..HEAD`</span><span class="p">])</span>
+  <span class="k">if </span><span class="p">(</span><span class="nx">revList</span><span class="p">.</span><span class="nx">code</span> <span class="o">!==</span> <span class="mi">0</span><span class="p">)</span> <span class="k">return</span> <span class="kc">null</span>      <span class="c1">// rev-list 失败 → null</span>
+
+  <span class="k">return</span> <span class="p">{</span> <span class="nx">changedFiles</span><span class="p">,</span> <span class="nx">commits</span> <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p><strong>状态恢复在 <code class="language-plaintext highlighter-rouge">restoreSessionToOriginalCwd()</code> 里——是 EnterWorktree 的精确逆操作：</strong></p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">function</span> <span class="nf">restoreSessionToOriginalCwd</span><span class="p">(</span><span class="nx">originalCwd</span><span class="p">:</span> <span class="kr">string</span><span class="p">,</span> <span class="nx">projectRootIsWorktree</span><span class="p">:</span> <span class="nx">boolean</span><span class="p">):</span> <span class="k">void</span> <span class="p">{</span>
+  <span class="nf">setCwd</span><span class="p">(</span><span class="nx">originalCwd</span><span class="p">)</span>
+  <span class="nf">setOriginalCwd</span><span class="p">(</span><span class="nx">originalCwd</span><span class="p">)</span>
+  <span class="k">if </span><span class="p">(</span><span class="nx">projectRootIsWorktree</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nf">setProjectRoot</span><span class="p">(</span><span class="nx">originalCwd</span><span class="p">)</span>
+    <span class="nf">updateHooksConfigSnapshot</span><span class="p">()</span>  <span class="c1">// 恢复 hooks 配置快照</span>
+  <span class="p">}</span>
+  <span class="nf">saveWorktreeState</span><span class="p">(</span><span class="kc">null</span><span class="p">)</span>        <span class="c1">// 清除持久化状态</span>
+  <span class="nf">clearSystemPromptSections</span><span class="p">()</span>    <span class="c1">// 与 Enter 时对称</span>
+  <span class="nf">clearMemoryFileCaches</span><span class="p">()</span>
+  <span class="nx">getPlansDirectory</span><span class="p">.</span><span class="nx">cache</span><span class="p">.</span><span class="nx">clear</span><span class="p">?.()</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="源码实证agenttool-的-worktree-隔离集成">源码实证：AgentTool 的 worktree 隔离集成</h2>
+
+<p><code class="language-plaintext highlighter-rouge">AgentTool</code>（<code class="language-plaintext highlighter-rouge">src/tools/AgentTool/AgentTool.tsx</code>）通过 <code class="language-plaintext highlighter-rouge">isolation: "worktree"</code> 参数让子 Agent 在独立 worktree 中运行。这是多 Agent 并行的核心机制。</p>
+
+<h3 id="isolation-参数定义">isolation 参数定义</h3>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// AgentTool.tsx — inputSchema</span>
+<span class="nx">isolation</span><span class="p">:</span> <span class="nx">z</span><span class="p">.</span><span class="nf">enum</span><span class="p">([</span><span class="dl">'</span><span class="s1">worktree</span><span class="dl">'</span><span class="p">])</span>
+  <span class="p">.</span><span class="nf">optional</span><span class="p">()</span>
+  <span class="p">.</span><span class="nf">describe</span><span class="p">(</span><span class="dl">'</span><span class="s1">Isolation mode. "worktree" creates a temporary git worktree </span><span class="dl">'</span>
+    <span class="o">+</span> <span class="dl">'</span><span class="s1">so the agent works on an isolated copy of the repo.</span><span class="dl">'</span><span class="p">)</span>
+</code></pre></div></div>
+
+<h3 id="创建流程">创建流程</h3>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// AgentTool.tsx — call() 中的 worktree 设置（简化）</span>
+
+<span class="c1">// 用 agent ID 的前 8 位生成 slug</span>
+<span class="kd">const</span> <span class="nx">earlyAgentId</span> <span class="o">=</span> <span class="nf">createAgentId</span><span class="p">()</span>
+<span class="kd">let</span> <span class="nx">worktreeInfo</span> <span class="o">=</span> <span class="kc">null</span>
+<span class="k">if </span><span class="p">(</span><span class="nx">effectiveIsolation</span> <span class="o">===</span> <span class="dl">'</span><span class="s1">worktree</span><span class="dl">'</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kd">const</span> <span class="nx">slug</span> <span class="o">=</span> <span class="s2">`agent-</span><span class="p">${</span><span class="nx">earlyAgentId</span><span class="p">.</span><span class="nf">slice</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">8</span><span class="p">)}</span><span class="s2">`</span>
+  <span class="nx">worktreeInfo</span> <span class="o">=</span> <span class="k">await</span> <span class="nf">createAgentWorktree</span><span class="p">(</span><span class="nx">slug</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="c1">// CWD 覆盖：worktree 路径覆盖 agent 的工作目录</span>
+<span class="kd">const</span> <span class="nx">cwdOverridePath</span> <span class="o">=</span> <span class="nx">cwd</span> <span class="o">??</span> <span class="nx">worktreeInfo</span><span class="p">?.</span><span class="nx">worktreePath</span>
+<span class="kd">const</span> <span class="nx">wrapWithCwd</span> <span class="o">=</span> <span class="o">&lt;</span><span class="nx">T</span><span class="p">,</span><span class="o">&gt;</span><span class="p">(</span><span class="nx">fn</span><span class="p">:</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="nx">T</span><span class="p">):</span> <span class="nx">T</span> <span class="o">=&gt;</span>
+  <span class="nx">cwdOverridePath</span> <span class="p">?</span> <span class="nf">runWithCwdOverride</span><span class="p">(</span><span class="nx">cwdOverridePath</span><span class="p">,</span> <span class="nx">fn</span><span class="p">)</span> <span class="p">:</span> <span class="nf">fn</span><span class="p">()</span>
+</code></pre></div></div>
+
+<p><code class="language-plaintext highlighter-rouge">createAgentWorktree()</code> 与 <code class="language-plaintext highlighter-rouge">createWorktreeForSession()</code> 的关键区别：<strong>它不修改全局 session 状态</strong>（不 <code class="language-plaintext highlighter-rouge">process.chdir</code>，不写 <code class="language-plaintext highlighter-rouge">currentWorktreeSession</code>，不改 project config），只返回路径信息：</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// worktree.ts — createAgentWorktree（简化）</span>
+<span class="k">export</span> <span class="k">async</span> <span class="kd">function</span> <span class="nf">createAgentWorktree</span><span class="p">(</span><span class="nx">slug</span><span class="p">:</span> <span class="kr">string</span><span class="p">):</span> <span class="nb">Promise</span><span class="o">&lt;</span><span class="p">{</span>
+  <span class="na">worktreePath</span><span class="p">:</span> <span class="kr">string</span>
+  <span class="nx">worktreeBranch</span><span class="p">?:</span> <span class="kr">string</span>
+  <span class="nx">headCommit</span><span class="p">?:</span> <span class="kr">string</span>
+  <span class="nx">gitRoot</span><span class="p">?:</span> <span class="kr">string</span>
+  <span class="nx">hookBased</span><span class="p">?:</span> <span class="nx">boolean</span>
+<span class="p">}</span><span class="o">&gt;</span> <span class="p">{</span>
+  <span class="nf">validateWorktreeSlug</span><span class="p">(</span><span class="nx">slug</span><span class="p">)</span>
+  <span class="c1">// 始终从 canonicalGitRoot 创建，防止 worktree 嵌套</span>
+  <span class="kd">const</span> <span class="nx">gitRoot</span> <span class="o">=</span> <span class="nf">findCanonicalGitRoot</span><span class="p">(</span><span class="nf">getCwd</span><span class="p">())</span>
+  <span class="c1">// ... 创建 worktree 但不修改全局状态</span>
+  <span class="k">return</span> <span class="p">{</span> <span class="nx">worktreePath</span><span class="p">,</span> <span class="nx">worktreeBranch</span><span class="p">,</span> <span class="nx">headCommit</span><span class="p">,</span> <span class="nx">gitRoot</span> <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h3 id="fork--worktree-上下文传递">Fork + Worktree 上下文传递</h3>
+
+<p>当子 Agent 从父 Agent fork 出来并运行在 worktree 中时，会注入一段路径转换提示：</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// forkSubagent.ts — buildWorktreeNotice</span>
+<span class="k">export</span> <span class="kd">function</span> <span class="nf">buildWorktreeNotice</span><span class="p">(</span><span class="nx">parentCwd</span><span class="p">:</span> <span class="kr">string</span><span class="p">,</span> <span class="nx">worktreeCwd</span><span class="p">:</span> <span class="kr">string</span><span class="p">):</span> <span class="kr">string</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="s2">`You've inherited the conversation context above from a parent agent `</span> <span class="o">+</span>
+    <span class="s2">`working in </span><span class="p">${</span><span class="nx">parentCwd</span><span class="p">}</span><span class="s2">. You are operating in an isolated git worktree `</span> <span class="o">+</span>
+    <span class="s2">`at </span><span class="p">${</span><span class="nx">worktreeCwd</span><span class="p">}</span><span class="s2"> — same repository, same relative file structure, `</span> <span class="o">+</span>
+    <span class="s2">`separate working copy. Paths in the inherited context refer to the `</span> <span class="o">+</span>
+    <span class="s2">`parent's working directory; translate them to your worktree root. `</span> <span class="o">+</span>
+    <span class="s2">`Re-read files before editing if the parent may have modified them...`</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h3 id="自动清理逻辑">自动清理逻辑</h3>
+
+<p>Agent 完成后，worktree 的清理遵循“有变更则保留”原则：</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">const</span> <span class="nx">cleanupWorktreeIfNeeded</span> <span class="o">=</span> <span class="k">async </span><span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+  <span class="k">if </span><span class="p">(</span><span class="o">!</span><span class="nx">worktreeInfo</span><span class="p">)</span> <span class="k">return</span> <span class="p">{}</span>
+  <span class="kd">const</span> <span class="p">{</span> <span class="nx">worktreePath</span><span class="p">,</span> <span class="nx">worktreeBranch</span><span class="p">,</span> <span class="nx">headCommit</span><span class="p">,</span> <span class="nx">gitRoot</span><span class="p">,</span> <span class="nx">hookBased</span> <span class="p">}</span> <span class="o">=</span> <span class="nx">worktreeInfo</span>
+  <span class="nx">worktreeInfo</span> <span class="o">=</span> <span class="kc">null</span>  <span class="c1">// 幂等：防止 try/catch 双重调用</span>
+
+  <span class="k">if </span><span class="p">(</span><span class="nx">hookBased</span><span class="p">)</span> <span class="k">return</span> <span class="p">{</span> <span class="nx">worktreePath</span> <span class="p">}</span>  <span class="c1">// hook-based 始终保留</span>
+
+  <span class="k">if </span><span class="p">(</span><span class="nx">headCommit</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">changed</span> <span class="o">=</span> <span class="k">await</span> <span class="nf">hasWorktreeChanges</span><span class="p">(</span><span class="nx">worktreePath</span><span class="p">,</span> <span class="nx">headCommit</span><span class="p">)</span>
+    <span class="k">if </span><span class="p">(</span><span class="o">!</span><span class="nx">changed</span><span class="p">)</span> <span class="p">{</span>
+      <span class="k">await</span> <span class="nf">removeAgentWorktree</span><span class="p">(</span><span class="nx">worktreePath</span><span class="p">,</span> <span class="nx">worktreeBranch</span><span class="p">,</span> <span class="nx">gitRoot</span><span class="p">)</span>
+      <span class="k">return</span> <span class="p">{}</span>  <span class="c1">// 无变更 → 自动删除，不返回路径</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+  <span class="k">return</span> <span class="p">{</span> <span class="nx">worktreePath</span><span class="p">,</span> <span class="nx">worktreeBranch</span> <span class="p">}</span>  <span class="c1">// 有变更 → 保留，返回路径</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h3 id="task-notification-中的-worktree-信息">task-notification 中的 worktree 信息</h3>
+
+<p>后台 Agent 完成后发送通知时，worktree 路径和分支会以 XML 嵌入：</p>
+
+<div class="language-xml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nt">&lt;task-notification&gt;</span>
+<span class="nt">&lt;task-id&gt;</span>agent_abc123<span class="nt">&lt;/task-id&gt;</span>
+<span class="nt">&lt;output-file&gt;</span>...<span class="nt">&lt;/output-file&gt;</span>
+<span class="nt">&lt;status&gt;</span>completed<span class="nt">&lt;/status&gt;</span>
+<span class="nt">&lt;summary&gt;</span>Agent "实现 JWT 验证" completed<span class="nt">&lt;/summary&gt;</span>
+<span class="nt">&lt;result&gt;</span>...<span class="nt">&lt;/result&gt;</span>
+<span class="nt">&lt;worktree&gt;</span>
+  <span class="nt">&lt;worktreePath&gt;</span>/repo/.claude/worktrees/agent-abc12345<span class="nt">&lt;/worktreePath&gt;</span>
+  <span class="nt">&lt;worktreeBranch&gt;</span>worktree/agent-abc12345<span class="nt">&lt;/worktreeBranch&gt;</span>
+<span class="nt">&lt;/worktree&gt;</span>
+<span class="nt">&lt;/task-notification&gt;</span>
+</code></pre></div></div>
+
+<p>这让父 Agent 知道子 Agent 的变更在哪个分支上，可以 merge 或 cherry-pick。</p>
+
+<hr />
+
+<h2 id="两平面架构">两平面架构</h2>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>控制平面（主目录）：
+  .tasks/        ← 任务定义和状态
+  .team/         ← 团队成员信息
+  .transcripts/  ← 对话历史归档
+
+执行平面（worktree 目录 — Claude Code 实际使用 .claude/worktrees/）：
+  .claude/worktrees/
+    agent-a1b2c3d4/    ← Agent A 的代码修改在这里
+    agent-e5f6g7h8/    ← Agent B 的代码修改在这里
+</code></pre></div></div>
+
+<p>控制平面只有任务数据，执行平面只有代码变更。两者物理隔离，互不污染。</p>
+
+<hr />
+
+<h2 id="从零实现worktreemanager">从零实现：WorktreeManager</h2>
+
+<p>理解了源码中的设计决策后，我们用 Python 实现一个简化版本：</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="n">subprocess</span><span class="p">,</span> <span class="n">json</span>
+<span class="kn">from</span> <span class="n">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span> <span class="n">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
+
+<span class="n">WORKTREES_DIR</span> <span class="o">=</span> <span class="nc">Path</span><span class="p">(</span><span class="sh">"</span><span class="s">.worktrees</span><span class="sh">"</span><span class="p">)</span>
+<span class="n">EVENTS_LOG</span> <span class="o">=</span> <span class="n">WORKTREES_DIR</span> <span class="o">/</span> <span class="sh">"</span><span class="s">events.jsonl</span><span class="sh">"</span>
+<span class="n">WORKTREES_DIR</span><span class="p">.</span><span class="nf">mkdir</span><span class="p">(</span><span class="n">exist_ok</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+<span class="k">class</span> <span class="nc">WorktreeManager</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">create</span><span class="p">(</span><span class="n">self</span><span class="p">,</span> <span class="n">task_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sh">"""</span><span class="s">为任务创建独立 worktree</span><span class="sh">"""</span>
+        <span class="n">worktree_path</span> <span class="o">=</span> <span class="n">WORKTREES_DIR</span> <span class="o">/</span> <span class="n">task_id</span>
+        <span class="n">branch_name</span> <span class="o">=</span> <span class="sa">f</span><span class="sh">"</span><span class="s">task/</span><span class="si">{</span><span class="n">task_id</span><span class="si">}</span><span class="sh">"</span>
+
+        <span class="k">if</span> <span class="n">worktree_path</span><span class="p">.</span><span class="nf">exists</span><span class="p">():</span>
+            <span class="k">return</span> <span class="sa">f</span><span class="sh">"</span><span class="s">Worktree already exists: </span><span class="si">{</span><span class="n">worktree_path</span><span class="si">}</span><span class="sh">"</span>
+
+        <span class="c1"># 从当前 HEAD 创建新分支和 worktree
+</span>        <span class="n">result</span> <span class="o">=</span> <span class="n">subprocess</span><span class="p">.</span><span class="nf">run</span><span class="p">(</span>
+            <span class="p">[</span><span class="sh">"</span><span class="s">git</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">worktree</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">add</span><span class="sh">"</span><span class="p">,</span> <span class="nf">str</span><span class="p">(</span><span class="n">worktree_path</span><span class="p">),</span> <span class="sh">"</span><span class="s">-b</span><span class="sh">"</span><span class="p">,</span> <span class="n">branch_name</span><span class="p">],</span>
+            <span class="n">capture_output</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="bp">True</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">result</span><span class="p">.</span><span class="n">returncode</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="sa">f</span><span class="sh">"</span><span class="s">Failed to create worktree: </span><span class="si">{</span><span class="n">result</span><span class="p">.</span><span class="n">stderr</span><span class="si">}</span><span class="sh">"</span>
+
+        <span class="c1"># 更新任务状态
+</span>        <span class="n">task_manager</span><span class="p">.</span><span class="nf">update_status</span><span class="p">(</span><span class="n">task_id</span><span class="p">,</span> <span class="sh">"</span><span class="s">in_progress</span><span class="sh">"</span><span class="p">,</span>
+                                   <span class="n">worktree</span><span class="o">=</span><span class="nf">str</span><span class="p">(</span><span class="n">worktree_path</span><span class="p">))</span>
+
+        <span class="n">self</span><span class="p">.</span><span class="nf">_log_event</span><span class="p">(</span><span class="n">task_id</span><span class="p">,</span> <span class="sh">"</span><span class="s">worktree_created</span><span class="sh">"</span><span class="p">,</span> <span class="p">{</span><span class="sh">"</span><span class="s">path</span><span class="sh">"</span><span class="p">:</span> <span class="nf">str</span><span class="p">(</span><span class="n">worktree_path</span><span class="p">)})</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="sh">"</span><span class="s">Created worktree: </span><span class="si">{</span><span class="n">worktree_path</span><span class="si">}</span><span class="se">\n</span><span class="s">Branch: </span><span class="si">{</span><span class="n">branch_name</span><span class="si">}</span><span class="sh">"</span>
+
+    <span class="k">def</span> <span class="nf">run_in</span><span class="p">(</span><span class="n">self</span><span class="p">,</span> <span class="n">task_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">command</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sh">"""</span><span class="s">在任务的 worktree 里执行命令</span><span class="sh">"""</span>
+        <span class="n">worktree_path</span> <span class="o">=</span> <span class="n">WORKTREES_DIR</span> <span class="o">/</span> <span class="n">task_id</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">worktree_path</span><span class="p">.</span><span class="nf">exists</span><span class="p">():</span>
+            <span class="k">return</span> <span class="sa">f</span><span class="sh">"</span><span class="s">Worktree not found for task </span><span class="si">{</span><span class="n">task_id</span><span class="si">}</span><span class="s">. Create it first.</span><span class="sh">"</span>
+
+        <span class="n">result</span> <span class="o">=</span> <span class="n">subprocess</span><span class="p">.</span><span class="nf">run</span><span class="p">(</span>
+            <span class="n">command</span><span class="p">,</span> <span class="n">shell</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">capture_output</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+            <span class="n">cwd</span><span class="o">=</span><span class="nf">str</span><span class="p">(</span><span class="n">worktree_path</span><span class="p">),</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">60</span>
+        <span class="p">)</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="p">(</span><span class="n">result</span><span class="p">.</span><span class="n">stdout</span> <span class="o">+</span> <span class="n">result</span><span class="p">.</span><span class="n">stderr</span><span class="p">)[:</span><span class="mi">50000</span><span class="p">]</span>
+        <span class="n">self</span><span class="p">.</span><span class="nf">_log_event</span><span class="p">(</span><span class="n">task_id</span><span class="p">,</span> <span class="sh">"</span><span class="s">command_run</span><span class="sh">"</span><span class="p">,</span> <span class="p">{</span><span class="sh">"</span><span class="s">command</span><span class="sh">"</span><span class="p">:</span> <span class="n">command</span><span class="p">,</span> <span class="sh">"</span><span class="s">returncode</span><span class="sh">"</span><span class="p">:</span> <span class="n">result</span><span class="p">.</span><span class="n">returncode</span><span class="p">})</span>
+        <span class="k">return</span> <span class="n">output</span>
+
+    <span class="k">def</span> <span class="nf">read_in</span><span class="p">(</span><span class="n">self</span><span class="p">,</span> <span class="n">task_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sh">"""</span><span class="s">读取任务 worktree 里的文件</span><span class="sh">"""</span>
+        <span class="n">worktree_path</span> <span class="o">=</span> <span class="n">WORKTREES_DIR</span> <span class="o">/</span> <span class="n">task_id</span>
+        <span class="n">file_path</span> <span class="o">=</span> <span class="p">(</span><span class="n">worktree_path</span> <span class="o">/</span> <span class="n">path</span><span class="p">).</span><span class="nf">resolve</span><span class="p">()</span>
+
+        <span class="c1"># 安全检查
+</span>        <span class="k">if</span> <span class="ow">not</span> <span class="n">file_path</span><span class="p">.</span><span class="nf">is_relative_to</span><span class="p">(</span><span class="n">worktree_path</span><span class="p">.</span><span class="nf">resolve</span><span class="p">()):</span>
+            <span class="k">return</span> <span class="sa">f</span><span class="sh">"</span><span class="s">Path escapes worktree: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="sh">"</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">file_path</span><span class="p">.</span><span class="nf">exists</span><span class="p">():</span>
+            <span class="k">return</span> <span class="sa">f</span><span class="sh">"</span><span class="s">File not found: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="sh">"</span>
+        <span class="k">return</span> <span class="n">file_path</span><span class="p">.</span><span class="nf">read_text</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">write_in</span><span class="p">(</span><span class="n">self</span><span class="p">,</span> <span class="n">task_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">content</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sh">"""</span><span class="s">写文件到任务 worktree</span><span class="sh">"""</span>
+        <span class="n">worktree_path</span> <span class="o">=</span> <span class="n">WORKTREES_DIR</span> <span class="o">/</span> <span class="n">task_id</span>
+        <span class="n">file_path</span> <span class="o">=</span> <span class="p">(</span><span class="n">worktree_path</span> <span class="o">/</span> <span class="n">path</span><span class="p">).</span><span class="nf">resolve</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">file_path</span><span class="p">.</span><span class="nf">is_relative_to</span><span class="p">(</span><span class="n">worktree_path</span><span class="p">.</span><span class="nf">resolve</span><span class="p">()):</span>
+            <span class="k">return</span> <span class="sa">f</span><span class="sh">"</span><span class="s">Path escapes worktree: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="sh">"</span>
+
+        <span class="n">file_path</span><span class="p">.</span><span class="n">parent</span><span class="p">.</span><span class="nf">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+        <span class="n">file_path</span><span class="p">.</span><span class="nf">write_text</span><span class="p">(</span><span class="n">content</span><span class="p">)</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="sh">"</span><span class="s">Written: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="sh">"</span>
+
+    <span class="k">def</span> <span class="nf">finish</span><span class="p">(</span><span class="n">self</span><span class="p">,</span> <span class="n">task_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">commit_message</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="bp">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sh">"""</span><span class="s">完成任务：提交变更，移除 worktree</span><span class="sh">"""</span>
+        <span class="n">worktree_path</span> <span class="o">=</span> <span class="n">WORKTREES_DIR</span> <span class="o">/</span> <span class="n">task_id</span>
+
+        <span class="k">if</span> <span class="n">commit_message</span><span class="p">:</span>
+            <span class="c1"># 提交所有变更
+</span>            <span class="n">subprocess</span><span class="p">.</span><span class="nf">run</span><span class="p">([</span><span class="sh">"</span><span class="s">git</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">add</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">-A</span><span class="sh">"</span><span class="p">],</span> <span class="n">cwd</span><span class="o">=</span><span class="nf">str</span><span class="p">(</span><span class="n">worktree_path</span><span class="p">))</span>
+            <span class="n">subprocess</span><span class="p">.</span><span class="nf">run</span><span class="p">(</span>
+                <span class="p">[</span><span class="sh">"</span><span class="s">git</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">commit</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">-m</span><span class="sh">"</span><span class="p">,</span> <span class="n">commit_message</span> <span class="ow">or</span> <span class="sa">f</span><span class="sh">"</span><span class="s">Complete </span><span class="si">{</span><span class="n">task_id</span><span class="si">}</span><span class="sh">"</span><span class="p">],</span>
+                <span class="n">cwd</span><span class="o">=</span><span class="nf">str</span><span class="p">(</span><span class="n">worktree_path</span><span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="c1"># 移除 worktree
+</span>        <span class="n">subprocess</span><span class="p">.</span><span class="nf">run</span><span class="p">([</span><span class="sh">"</span><span class="s">git</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">worktree</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">remove</span><span class="sh">"</span><span class="p">,</span> <span class="nf">str</span><span class="p">(</span><span class="n">worktree_path</span><span class="p">),</span> <span class="sh">"</span><span class="s">--force</span><span class="sh">"</span><span class="p">])</span>
+        <span class="n">task_manager</span><span class="p">.</span><span class="nf">complete</span><span class="p">(</span><span class="n">task_id</span><span class="p">)</span>
+        <span class="n">self</span><span class="p">.</span><span class="nf">_log_event</span><span class="p">(</span><span class="n">task_id</span><span class="p">,</span> <span class="sh">"</span><span class="s">worktree_finished</span><span class="sh">"</span><span class="p">,</span> <span class="p">{</span><span class="sh">"</span><span class="s">committed</span><span class="sh">"</span><span class="p">:</span> <span class="nf">bool</span><span class="p">(</span><span class="n">commit_message</span><span class="p">)})</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="sh">"</span><span class="s">Task </span><span class="si">{</span><span class="n">task_id</span><span class="si">}</span><span class="s"> finished. Worktree removed.</span><span class="sh">"</span>
+
+    <span class="k">def</span> <span class="nf">list</span><span class="p">(</span><span class="n">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">subprocess</span><span class="p">.</span><span class="nf">run</span><span class="p">(</span>
+            <span class="p">[</span><span class="sh">"</span><span class="s">git</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">worktree</span><span class="sh">"</span><span class="p">,</span> <span class="sh">"</span><span class="s">list</span><span class="sh">"</span><span class="p">],</span> <span class="n">capture_output</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="bp">True</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">result</span><span class="p">.</span><span class="n">stdout</span>
+
+    <span class="k">def</span> <span class="nf">_log_event</span><span class="p">(</span><span class="n">self</span><span class="p">,</span> <span class="n">task_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">event</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="n">entry</span> <span class="o">=</span> <span class="n">json</span><span class="p">.</span><span class="nf">dumps</span><span class="p">({</span>
+            <span class="sh">"</span><span class="s">task_id</span><span class="sh">"</span><span class="p">:</span> <span class="n">task_id</span><span class="p">,</span>
+            <span class="sh">"</span><span class="s">event</span><span class="sh">"</span><span class="p">:</span> <span class="n">event</span><span class="p">,</span>
+            <span class="sh">"</span><span class="s">data</span><span class="sh">"</span><span class="p">:</span> <span class="n">data</span><span class="p">,</span>
+            <span class="sh">"</span><span class="s">timestamp</span><span class="sh">"</span><span class="p">:</span> <span class="n">datetime</span><span class="p">.</span><span class="nf">now</span><span class="p">().</span><span class="nf">isoformat</span><span class="p">(),</span>
+        <span class="p">})</span>
+        <span class="k">with</span> <span class="nf">open</span><span class="p">(</span><span class="n">EVENTS_LOG</span><span class="p">,</span> <span class="sh">"</span><span class="s">a</span><span class="sh">"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">f</span><span class="p">.</span><span class="nf">write</span><span class="p">(</span><span class="n">entry</span> <span class="o">+</span> <span class="sh">"</span><span class="se">\n</span><span class="sh">"</span><span class="p">)</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="工具接口">工具接口</h2>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">wt</span> <span class="o">=</span> <span class="nc">WorktreeManager</span><span class="p">()</span>
+
+<span class="n">TOOL_HANDLERS</span><span class="p">.</span><span class="nf">update</span><span class="p">({</span>
+    <span class="sh">"</span><span class="s">worktree_create</span><span class="sh">"</span><span class="p">:</span>  <span class="k">lambda</span> <span class="o">**</span><span class="n">kw</span><span class="p">:</span> <span class="n">wt</span><span class="p">.</span><span class="nf">create</span><span class="p">(</span><span class="n">kw</span><span class="p">[</span><span class="sh">"</span><span class="s">task_id</span><span class="sh">"</span><span class="p">]),</span>
+    <span class="sh">"</span><span class="s">worktree_bash</span><span class="sh">"</span><span class="p">:</span>    <span class="k">lambda</span> <span class="o">**</span><span class="n">kw</span><span class="p">:</span> <span class="n">wt</span><span class="p">.</span><span class="nf">run_in</span><span class="p">(</span><span class="n">kw</span><span class="p">[</span><span class="sh">"</span><span class="s">task_id</span><span class="sh">"</span><span class="p">],</span> <span class="n">kw</span><span class="p">[</span><span class="sh">"</span><span class="s">command</span><span class="sh">"</span><span class="p">]),</span>
+    <span class="sh">"</span><span class="s">worktree_read</span><span class="sh">"</span><span class="p">:</span>    <span class="k">lambda</span> <span class="o">**</span><span class="n">kw</span><span class="p">:</span> <span class="n">wt</span><span class="p">.</span><span class="nf">read_in</span><span class="p">(</span><span class="n">kw</span><span class="p">[</span><span class="sh">"</span><span class="s">task_id</span><span class="sh">"</span><span class="p">],</span> <span class="n">kw</span><span class="p">[</span><span class="sh">"</span><span class="s">path</span><span class="sh">"</span><span class="p">]),</span>
+    <span class="sh">"</span><span class="s">worktree_write</span><span class="sh">"</span><span class="p">:</span>   <span class="k">lambda</span> <span class="o">**</span><span class="n">kw</span><span class="p">:</span> <span class="n">wt</span><span class="p">.</span><span class="nf">write_in</span><span class="p">(</span><span class="n">kw</span><span class="p">[</span><span class="sh">"</span><span class="s">task_id</span><span class="sh">"</span><span class="p">],</span> <span class="n">kw</span><span class="p">[</span><span class="sh">"</span><span class="s">path</span><span class="sh">"</span><span class="p">],</span> <span class="n">kw</span><span class="p">[</span><span class="sh">"</span><span class="s">content</span><span class="sh">"</span><span class="p">]),</span>
+    <span class="sh">"</span><span class="s">worktree_finish</span><span class="sh">"</span><span class="p">:</span>  <span class="k">lambda</span> <span class="o">**</span><span class="n">kw</span><span class="p">:</span> <span class="n">wt</span><span class="p">.</span><span class="nf">finish</span><span class="p">(</span><span class="n">kw</span><span class="p">[</span><span class="sh">"</span><span class="s">task_id</span><span class="sh">"</span><span class="p">],</span> <span class="n">kw</span><span class="p">.</span><span class="nf">get</span><span class="p">(</span><span class="sh">"</span><span class="s">commit_message</span><span class="sh">"</span><span class="p">)),</span>
+    <span class="sh">"</span><span class="s">worktree_list</span><span class="sh">"</span><span class="p">:</span>    <span class="k">lambda</span> <span class="o">**</span><span class="n">kw</span><span class="p">:</span> <span class="n">wt</span><span class="p">.</span><span class="nf">list</span><span class="p">(),</span>
+<span class="p">})</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="源码-vs-从零实现设计差异对照">源码 vs 从零实现：设计差异对照</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>维度</th>
+      <th>Claude Code 源码</th>
+      <th>我们的 WorktreeManager</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Worktree 路径</td>
+      <td><code class="language-plaintext highlighter-rouge">.claude/worktrees/&lt;slug&gt;</code></td>
+      <td><code class="language-plaintext highlighter-rouge">.worktrees/&lt;task_id&gt;</code></td>
+    </tr>
+    <tr>
+      <td>Name 校验</td>
+      <td><code class="language-plaintext highlighter-rouge">validateWorktreeSlug()</code> 逐段正则 + 路径穿越防护</td>
+      <td>无校验（生产代码需要加）</td>
+    </tr>
+    <tr>
+      <td>缓存管理</td>
+      <td>切换 CWD 后清空 system prompt / memory file / plans 三类缓存</td>
+      <td>不涉及（无 LLM 上下文缓存）</td>
+    </tr>
+    <tr>
+      <td>退出策略</td>
+      <td><code class="language-plaintext highlighter-rouge">keep</code> / <code class="language-plaintext highlighter-rouge">remove</code> 双模式，<code class="language-plaintext highlighter-rouge">remove</code> 需确认未提交变更</td>
+      <td>只有 <code class="language-plaintext highlighter-rouge">finish</code>（总是删除）</td>
+    </tr>
+    <tr>
+      <td>Fail-closed</td>
+      <td><code class="language-plaintext highlighter-rouge">countWorktreeChanges</code> 返回 null 时拒绝删除</td>
+      <td>不检查变更直接删除</td>
+    </tr>
+    <tr>
+      <td>Agent worktree</td>
+      <td><code class="language-plaintext highlighter-rouge">createAgentWorktree()</code> 不修改全局状态，agent 完成后自动清理</td>
+      <td>N/A</td>
+    </tr>
+    <tr>
+      <td>规范化</td>
+      <td><code class="language-plaintext highlighter-rouge">findCanonicalGitRoot()</code> 防止 worktree 嵌套</td>
+      <td>假设从主仓库运行</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr />
+
+<h2 id="完整任务执行流程">完整任务执行流程</h2>
+
+<pre><code class="language-mermaid">flowchart TD
+    A[claim_task: task_001] --&gt; B[worktree_create: task_001]
+    B --&gt; C["worktree_read: task_001, src/auth.py"]
+    C --&gt; D["worktree_write: task_001, src/auth.py"]
+    D --&gt; E["worktree_bash: task_001, pytest tests/"]
+    E --&gt; F{测试通过?}
+    F --&gt;|是| G[worktree_finish: task_001&lt;br&gt;实现 JWT 验证]
+    F --&gt;|否| D
+    G --&gt; H[idle: 等待新任务]
+</code></pre>
+
+<hr />
+
+<h2 id="崩溃恢复">崩溃恢复</h2>
+
+<p><code class="language-plaintext highlighter-rouge">.worktrees/events.jsonl</code> 记录了所有操作：</p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="nl">"task_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"task_001"</span><span class="p">,</span><span class="w"> </span><span class="nl">"event"</span><span class="p">:</span><span class="w"> </span><span class="s2">"worktree_created"</span><span class="p">,</span><span class="w"> </span><span class="nl">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"..."</span><span class="p">}</span><span class="w">
+</span><span class="p">{</span><span class="nl">"task_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"task_001"</span><span class="p">,</span><span class="w"> </span><span class="nl">"event"</span><span class="p">:</span><span class="w"> </span><span class="s2">"command_run"</span><span class="p">,</span><span class="w"> </span><span class="nl">"data"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nl">"command"</span><span class="p">:</span><span class="w"> </span><span class="s2">"pytest"</span><span class="p">},</span><span class="w"> </span><span class="err">...</span><span class="p">}</span><span class="w">
+</span><span class="p">{</span><span class="nl">"task_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"task_001"</span><span class="p">,</span><span class="w"> </span><span class="nl">"event"</span><span class="p">:</span><span class="w"> </span><span class="s2">"worktree_finished"</span><span class="p">,</span><span class="w"> </span><span class="err">...</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p>如果进程崩溃，从日志里可以知道：哪些任务已经建了 worktree（可以继续），哪些完成了（可以跳过），哪些在中途（需要清理）。</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">recover_from_crash</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+    <span class="sh">"""</span><span class="s">从事件日志恢复未完成的任务</span><span class="sh">"""</span>
+    <span class="n">events</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">EVENTS_LOG</span><span class="p">.</span><span class="nf">exists</span><span class="p">():</span>
+        <span class="k">return</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">EVENTS_LOG</span><span class="p">.</span><span class="nf">read_text</span><span class="p">().</span><span class="nf">splitlines</span><span class="p">():</span>
+        <span class="n">ev</span> <span class="o">=</span> <span class="n">json</span><span class="p">.</span><span class="nf">loads</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+        <span class="n">events</span><span class="p">[</span><span class="n">ev</span><span class="p">[</span><span class="sh">"</span><span class="s">task_id</span><span class="sh">"</span><span class="p">]]</span> <span class="o">=</span> <span class="n">ev</span><span class="p">[</span><span class="sh">"</span><span class="s">event</span><span class="sh">"</span><span class="p">]</span>  <span class="c1"># 只保留最新事件
+</span>
+    <span class="n">incomplete</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">task_id</span> <span class="k">for</span> <span class="n">task_id</span><span class="p">,</span> <span class="n">last_event</span> <span class="ow">in</span> <span class="n">events</span><span class="p">.</span><span class="nf">items</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">last_event</span> <span class="o">==</span> <span class="sh">"</span><span class="s">worktree_created</span><span class="sh">"</span>  <span class="c1"># 创建了但没完成
+</span>    <span class="p">]</span>
+    <span class="k">return</span> <span class="n">incomplete</span>
+</code></pre></div></div>
+
+<p>Claude Code 的做法更精细：通过 <code class="language-plaintext highlighter-rouge">saveWorktreeState()</code> 将 worktree session 持久化到 project config，重启时 <code class="language-plaintext highlighter-rouge">restoreWorktreeSession()</code> 恢复。Agent worktree 则有专门的 <code class="language-plaintext highlighter-rouge">cleanupStaleAgentWorktrees()</code> 定期扫描 <code class="language-plaintext highlighter-rouge">.claude/worktrees/</code> 目录清理过期的。</p>
+
+<h2 id="设计哲学安全是默认便利是可选">设计哲学：安全是默认，便利是可选</h2>
+
+<p>Worktree 隔离是设计指南<strong>第二原则——安全是默认（Secure by Default）</strong>的最佳案例。</p>
+
+<p>Claude Code 的 5 层权限模型：</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Layer 1: 操作系统沙箱（macOS Seatbelt / Linux Landlock）
+Layer 2: 网络访问控制（允许列表 vs 拒绝列表）
+Layer 3: 文件系统边界（项目目录 + 明确添加的路径）
+Layer 4: 工具级别权限（每个工具独立的 allow/deny/ask）
+Layer 5: Bash 命令分类（读命令自动放行，写命令需要确认）
+</code></pre></div></div>
+
+<p>Worktree 处于 Layer 3——文件系统隔离。它的设计遵循 <strong>fail-closed</strong> 原则：</p>
+
+<ul>
+  <li>Agent worktree 创建失败？不执行任何操作，返回错误</li>
+  <li>worktree 退出时发现未提交更改？保留 worktree，不删除（宁可泄漏资源也不丢失工作）</li>
+  <li>3 处缓存需要清除（system prompt cache、permission classifier approvals cache、session messages cache）？全部清除，即使某些可能不需要</li>
+</ul>
+
+<p>这和“便利优先”的设计完全相反。便利优先会选择：失败时自动回退到主分支、退出时自动丢弃未提交更改、只清除确认需要清除的缓存。但这些“便利”在出错时会导致数据丢失或安全漏洞。</p>
+
+<p>设计指南总结了整个 Claude Code 的安全哲学：<strong>能力和控制之间的平衡</strong>。Worktree 给了 Agent 并行修改代码的能力，但通过 fail-closed 设计和 5 层权限确保这种能力始终在人类的控制之下。</p>
+
+<hr />
+
+<h2 id="这套系统的全貌">这套系统的全貌</h2>
+
+<p>至此，12 节课的所有机制组合在一起：</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>s01: while True loop       → Agent 的心跳
+s02: dispatch map          → 工具系统的骨架
+s03: TodoManager           → 单 Agent 的规划
+s04: Subagent              → 上下文隔离
+s05: Skill loading         → 知识按需加载
+s06: Context compact       → 无限会话长度
+
+s07: Task graph            → 任务依赖和持久化
+s08: Background tasks      → 非阻塞执行
+s09: Agent teams           → 多 Agent 通信
+s10: Protocols             → 结构化协作
+s11: Autonomous agents     → 自组织
+s12: Worktree isolation    → 并行安全
+</code></pre></div></div>
+
+<p>从一个 30 行的循环，到一个能并行处理真实工程任务的自治 Agent 团队。</p>
+
+<p>每一层都有具体的问题驱动，每一层的代码都可以独立理解和修改。</p>
+
+<hr />
+
+<p><a href="../index.html">← 返回 Claude Code 模块首页</a></p>
+
+                <!-- Article Feedback -->
+                <div class="article-feedback" id="article-feedback">
+                    <span class="feedback-label">这篇文章有帮助吗？</span>
+                    <div class="feedback-btns">
+                        <button class="reaction-btn" id="btn-like" type="button" aria-label="点赞">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
+                            <span class="reaction-count" id="like-count">0</span>
+                        </button>
+                        <button class="reaction-btn" id="btn-dislike" type="button" aria-label="点踩">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3H10z"/><path d="M17 2h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3"/></svg>
+                            <span class="reaction-count" id="dislike-count">0</span>
+                        </button>
+                    </div>
+                    <span class="feedback-sep">|</span>
+                    <a class="feedback-comment" id="feedback-comment" href="#" target="_blank" rel="noopener">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                        GitHub 留言
+                    </a>
+                </div>
+                <!-- Prev / Next pager -->
+                <nav class="doc-pager" aria-label="章节导航">
+                    <a class="pager-btn pager-prev" id="pager-prev" href="#">
+                        <span class="pager-label">← 上一篇</span>
+                        <span class="pager-title" id="pager-prev-title"></span>
+                    </a>
+                    <a class="pager-btn pager-next" id="pager-next" href="#">
+                        <span class="pager-label">下一篇 →</span>
+                        <span class="pager-title" id="pager-next-title"></span>
+                    </a>
+                </nav>
+            </article>
+
+            <!-- Right: TOC -->
+            <nav class="doc-toc" id="doc-toc">
+                <p class="toc-label">本页目录</p>
+                <div id="toc-list"></div>
+            </nav>
+        </main>
+
+        <footer class="doc-footer">
+            <div class="doc-footer-inner">
+                <span class="footer-desc">Zero2Agent · static docs architecture · Built for learning Agent development from zero to project.</span>
+                <span id="busuanzi_container_site_uv" class="footer-counter" style="display:none">
+                    👤 你是第 <span id="busuanzi_value_site_uv" class="cv"></span> 位读者
+                </span>
+                <span id="busuanzi_container_page_pv" class="footer-counter" style="display:none">
+                    📖 本文 <span id="busuanzi_value_page_pv" class="cv"></span> 次阅读
+                </span>
+                <div class="footer-links">
+                    <a href="https://onefly.top" target="_blank" rel="noopener" class="footer-link">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
+                            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                        </svg>
+                        Onefly
+                    </a>
+                    <a href="https://github.com/ranxi2001/zero2Agent" target="_blank" rel="noopener" class="footer-link">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.522 2 12 2z"/>
+                        </svg>
+                        GitHub
+                    </a>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Back to top button -->
+    <button class="back-to-top" id="back-to-top" aria-label="回到顶部" title="回到顶部">🚀</button>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script>
+        // Prevent hljs from processing mermaid code blocks
+        document.querySelectorAll('.language-mermaid code, code.language-mermaid').forEach(function(el) {
+            el.classList.add('nohighlight');
+        });
+        hljs.highlightAll();
+    </script>
+    <!-- Transform kramdown mermaid code blocks and render -->
+    <script>
+        (function () {
+            function srcToInnerHTML(src) {
+                return src
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/&lt;br\s*\/?&gt;/gi, '<br/>');
+            }
+
+            document.querySelectorAll('.language-mermaid').forEach(function(wrapper) {
+                var code = wrapper.querySelector('code') || wrapper;
+                var src = code.textContent;
+                var div = document.createElement('div');
+                div.className = 'mermaid';
+                div.dataset.mermaidSrc = src;
+                div.innerHTML = srcToInnerHTML(src);
+                wrapper.parentNode.replaceChild(div, wrapper);
+            });
+
+            var els = document.querySelectorAll('.mermaid');
+            if (els.length > 0) mermaid.init(undefined, els);
+        })();
+    </script>
+    <!-- Flat nav list for prev/next pager -->
+    <script>
+        window.Z2A_BASE = "";
+        window.Z2A_REACTIONS_API = "https://zero2pm-reactions.ranxi169.workers.dev";
+        window.Z2A_NAV = [{"path":"learn-agent-basic/01-what-is-an-agent","title":"什么是 Agent"},{"path":"learn-agent-basic/02-workflow-vs-agent","title":"Workflow 和 Agent 的区别"},{"path":"learn-agent-basic/03-core-components","title":"一个 Agent 系统的核心组成"},{"path":"learn-agent-basic/04-why-agent-demos-break","title":"为什么很多 Agent Demo 一落地就不稳定"},{"path":"learn-agent-basic/05-tool-calling-basics","title":"大模型 API 输入输出与 Tool Calling"},{"path":"learn-agent-basic/06-memory-patterns","title":"Context、State 与 Memory"},{"path":"learn-agent-basic/07-planning-reflection-rag","title":"Planning、Reflection、RAG 分别解决什么问题"},{"path":"learn-agent-basic/08-single-vs-multi-agent","title":"单 Agent 和多 Agent 的边界"},{"path":"learn-agent-basic/09-agent-infra","title":"Agent Infra：从 Harness 到生产环境"},{"path":"learn-agent-basic/10-loop-engineering","title":"Loop Engineering：让 Agent 自主迭代直到正确"},{"path":"learn-agent-basic/11-agent-evaluation","title":"Agent 评估：怎么知道你的 Agent 好不好"},{"path":"learn-agent-basic/12-coding-agent-patterns","title":"Coding Agent：最成功的 Agent 落地形态"},{"path":"learn-agent-basic/13-context-engineering","title":"Context Engineering：系统化设计模型输入"},{"path":"learn-agent-basic/14-multimodal-realtime","title":"多模态与实时交互 Agent"},{"path":"learn-agent-basic/15-agent-self-evolution","title":"Agent 自进化：不改权重也能持续变强"},{"path":"learn-agent-basic/16-advanced-rag-memory","title":"高级 RAG 与记忆架构"},{"path":"learn-agent-basic/17-async-event-driven","title":"异步 Agent 与事件驱动架构"},{"path":"learn-langgraph/01-what-is-langgraph","title":"LangGraph 是什么，为什么不用链式调用"},{"path":"learn-langgraph/02-state-node-graph","title":"State、Node、Graph 三件套"},{"path":"learn-langgraph/03-sequential-graph","title":"顺序图：第一个可运行的 Workflow"},{"path":"learn-langgraph/04-conditional-edges","title":"条件分支：add_conditional_edges"},{"path":"learn-langgraph/05-parallel-workflows","title":"并行执行：Fan-out / Fan-in"},{"path":"learn-langgraph/06-prompt-chaining","title":"Prompt Chaining：分步生成"},{"path":"learn-langgraph/07-llm-integration","title":"接入 LLM：OpenAI 与 HuggingFace"},{"path":"learn-sdk-frameworks/01-openai-agents-sdk","title":"OpenAI Agents SDK：Agent、Tool、Handoff"},{"path":"learn-sdk-frameworks/02-google-gemini-sdk","title":"Google genai SDK：Gemini + Vertex AI 多模型"},{"path":"learn-sdk-frameworks/03-claude-anthropic-sdk","title":"Claude Anthropic SDK：Messages API 与 Tool Use"},{"path":"learn-sdk-frameworks/04-sdk-comparison","title":"三大 SDK 横向对比：怎么选"},{"path":"learn-agent-survey/01-agentscope","title":"AgentScope：阿里的多 Agent 框架"},{"path":"learn-agent-survey/02-mastra","title":"Mastra：TypeScript 原生 Agent 框架"},{"path":"learn-agent-survey/03-semantic-kernel","title":"Semantic Kernel：微软的企业级 AI SDK"},{"path":"learn-agent-survey/04-eino","title":"Eino：字节跳动的 Go 语言 Agent 框架"},{"path":"learn-agent-survey/05-gitagent","title":"GitAgent：代码仓库智能操作"},{"path":"learn-agent-survey/06-harness","title":"手搓 Agent：从原理到实现"},{"path":"learn-agent-survey/07-agentuniverse","title":"AgentUniverse：华为的企业级 Agent 平台"},{"path":"learn-agent-survey/08-deerflow","title":"DeerFlow：字节跳动的 Deep Research 框架"},{"path":"learn-agent-survey/09-langchain","title":"LangChain：最流行的 LLM 框架"},{"path":"learn-agent-survey/10-google-adk","title":"Google ADK：官方 Agent 开发套件"},{"path":"learn-agent-survey/11-skills-claudecode","title":"Skills + Claude Code：模块化技能系统"},{"path":"learn-agent-survey/12-vercel-ai-sdk","title":"Vercel AI SDK：全栈 AI 应用框架"},{"path":"learn-agent-survey/13-autogen","title":"AutoGen：微软的多 Agent 对话框架"},{"path":"learn-openclaw/01-core-idea","title":"为什么要自己写 Agent"},{"path":"learn-openclaw/02-node-to-agent","title":"Agent Loop：EventStream 核心循环"},{"path":"learn-openclaw/03-rag","title":"RAG：检索增强工程实现"},{"path":"learn-openclaw/04-tools","title":"工具系统：MCP 与并行执行"},{"path":"learn-openclaw/05-memory","title":"Context Engine：记忆架构"},{"path":"learn-openclaw/06-multi-agent","title":"Multi-Agent：隔离与路由"},{"path":"learn-openclaw/07-pi-mono","title":"读懂 pi-mono 源码"},{"path":"learn-openclaw/08-build-openclaw","title":"构建你的 OpenClaw"},{"path":"learn-openclaw/09-interview","title":"面试与实习准备"},{"path":"learn-claude-code/01-agent-loop","title":"Agent Loop：一个循环就是一个 Agent"},{"path":"learn-claude-code/02-tool-use","title":"Tool Use：扩展模型能触达的边界"},{"path":"learn-claude-code/03-todo-write","title":"TodoWrite：让 Agent 不再迷路"},{"path":"learn-claude-code/04-subagent","title":"Subagent：上下文隔离的正确姿势"},{"path":"learn-claude-code/05-skill-loading","title":"Skill Loading：按需加载领域知识"},{"path":"learn-claude-code/06-context-compact","title":"Context Compact：三层压缩换无限会话"},{"path":"learn-claude-code/07-task-system","title":"Task System：持久化任务图"},{"path":"learn-claude-code/08-background-tasks","title":"Background Tasks：非阻塞工具执行"},{"path":"learn-claude-code/09-agent-teams","title":"Agent Teams：多 Agent 协作"},{"path":"learn-claude-code/10-team-protocols","title":"Team Protocols：结构化通信协议"},{"path":"learn-claude-code/11-autonomous-agents","title":"Autonomous Agents：自组织团队"},{"path":"learn-claude-code/12-worktree-isolation","title":"Worktree 隔离：多 Agent 并行不踩踏"},{"path":"learn-deepseek-harness/01-what-is-harness","title":"DeepSeek Harness：一切皆插件的 Agent 运行时"},{"path":"learn-deepseek-harness/02-cordis-plugin-kernel","title":"声明式与命令式：Cordis 的五个核心概念"},{"path":"learn-deepseek-harness/03-profile-bundle-patch","title":"运行中的 DSH：插件树、组合层与能力接缝"},{"path":"learn-deepseek-harness/04-llm-seam","title":"LLM 接缝：把模型差异关在适配器里"},{"path":"learn-deepseek-harness/05-agent-loop","title":"Agent Loop：控制平面如何推进任务"},{"path":"learn-deepseek-harness/06-tool-pipeline","title":"Tool Pipeline：能力为什么不能直接等于权限"},{"path":"learn-deepseek-harness/07-session-log","title":"Session Log：为什么日志就是事实源"},{"path":"learn-deepseek-harness/08-inbox-control","title":"Inbox 控制：为什么用户插话必须有自己的语义"},{"path":"learn-deepseek-harness/09-code-mode","title":"Code Mode：上下文压缩不等于安全隔离"},{"path":"learn-deepseek-harness/10-context-compaction-cost","title":"Context Compaction：把上下文当作工作集管理"},{"path":"learn-deepseek-harness/11-security-boundary","title":"安全边界：把信任放到模型之外"},{"path":"learn-deepseek-harness/12-subagent-orchestration","title":"Subagent 编排：扩展能力而不是复制 Loop"},{"path":"learn-deepseek-harness/13-runtime-surfaces","title":"Runtime Surfaces：一套运行时如何服务多个宿主"},{"path":"learn-agent-training/01-agent-sft","title":"Agent SFT 关键细节：从轨迹数据到 Loss Mask"},{"path":"learn-agent-training/02-agent-rl","title":"Agent RL 实战：用强化学习提升推理与决策质量"},{"path":"learn-agent-training/03-grpo-vs-ppo","title":"GRPO vs PPO：Agent 强化学习算法深度对比与选型"},{"path":"learn-agent-training/04-data-mix","title":"训练数据配比实战：Agent 不只吃轨迹数据"},{"path":"learn-agent-training/05-agent-eval","title":"Agent 评测：怎么衡量训练效果"},{"path":"learn-agent-training/06-train-to-deploy","title":"从 SFT 到部署：Agent 模型上线全流程"},{"path":"learn-agent-training/07-training-environment-engineering","title":"Agent 训练环境工程：从仿真沙箱到数据回流闭环"},{"path":"learn-agent-practice/01-vibe-coding-homepage","title":"从 0 开始 Vibe Coding：用 Codex 发布个人主页"},{"path":"learn-agent-practice/02-ai-coding-interview","title":"AI Coding 面试：解题流程与交付策略"},{"path":"learn-agent-practice/03-daily-dev-workflow","title":"日常开发中的 Agent 工作流"},{"path":"learn-agent-practice/04-auto-harness","title":"Auto Harness 迭代实战"},{"path":"learn-agent-practice/05-eval-driven-practice","title":"Eval-Driven Agent Practice：用评估驱动 Agent 工作流迭代"},{"path":"learn-pi/01-what-is-pi","title":"Pi 是什么：定位、架构与 Agent Loop"},{"path":"learn-pi/02-pi-ai-provider","title":"pi-ai：统一多 Provider 的适配层设计"},{"path":"learn-pi/03-extension-system","title":"扩展体系：Skill、Extension 与 Package"},{"path":"learn-pi/04-mcp-adapter","title":"Pi 为什么不内置 MCP：Adapter 与 Token 取舍"},{"path":"learn-pi/05-security-model","title":"安全模型：Project Trust、权限门禁与系统隔离"},{"path":"learn-pi/06-ecosystem","title":"生态使用：发现、审计与退出策略"},{"path":"learn-pi/07-comparison","title":"Pi vs Claude Code vs DSH：按约束选择 Harness"},{"path":"learn-pi/08-session-runtime","title":"Session Runtime：树形历史、恢复与 Compaction"},{"path":"learn-codex/01-what-is-codex","title":"Codex CLI 是什么：定位、架构与 Agent Loop"},{"path":"learn-codex/02-config-permission","title":"配置与权限系统：TOML 层级与三种审批策略"},{"path":"learn-codex/03-sandbox-security","title":"沙箱与安全模型：平台原生隔离的工程边界"},{"path":"learn-codex/04-mcp-integration","title":"MCP 深度集成：工具协议与审批边界"},{"path":"learn-codex/05-codex-sdk","title":"Codex SDK：Thread-based 编程式 Agent 接口"},{"path":"learn-codex/06-developer-experience","title":"开发者体验与生态评估"},{"path":"learn-codex/07-codex-vs-claude-code","title":"Codex vs Claude Code vs DSH"},{"path":"learn-agent-interview/01-architecture-design","title":"架构选型"},{"path":"learn-agent-interview/02-tool-management","title":"工具管理"},{"path":"learn-agent-interview/03-fault-tolerance","title":"容错与鲁棒性"},{"path":"learn-agent-interview/04-memory-context","title":"记忆与上下文"},{"path":"learn-agent-interview/05-eval-and-vision","title":"评估与全局观"},{"path":"learn-agent-interview/06-multi-agent-collab","title":"多智能体协作"},{"path":"learn-agent-interview/07-engineering-pitfalls","title":"工程化踩坑"},{"path":"learn-agent-interview/08-prompt-engineering","title":"Prompt 工程与框架原理"},{"path":"learn-agent-interview/09-rag-retrieval","title":"RAG 与检索系统"},{"path":"learn-agent-interview/10-training-and-data","title":"训练、数据与模型优化"},{"path":"learn-agent-interview/11-ai-code-testing","title":"AI 代码分析与测试"},{"path":"learn-agent-interview/12-business-ai-engineering","title":"业务 AI 工程分析"},{"path":"learn-agent-interview/13-project-deep-dive","title":"简历项目拷打"},{"path":"learn-agent-interview/14-company-preferences","title":"各公司面试偏好"},{"path":"learn-agent-interview/15-agent-concepts","title":"概念考察"},{"path":"final-project/01-prd","title":"PRD：产品需求文档"},{"path":"final-project/02-architecture","title":"系统架构设计"},{"path":"final-project/03-query-engine","title":"Query Engine 实现"},{"path":"final-project/04-tools-skills","title":"Tools & Skills 实现"},{"path":"final-project/05-knowledge-base","title":"知识库构建"},{"path":"final-project/06-context-memory","title":"Context & Memory"},{"path":"final-project/07-permission-session","title":"Permission & Session"},{"path":"final-project/08-hook-command","title":"Hook & Command"},{"path":"final-project/09-sub-agent","title":"Sub-agent 编排"},{"path":"final-project/10-stt-speech","title":"STT 集成与语音分析"},{"path":"final-project/11-deploy-demo","title":"部署与演示"},{"path":"final-project/12-web-ui","title":"Web UI 交互设计"},];
+    </script>
+    <script src="/assets/js/app.js?v=11"></script>
+    <script src="/assets/js/github-stars.js?v=1"></script>
+</body>
+
+</html>

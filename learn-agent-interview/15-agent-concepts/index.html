@@ -1,0 +1,2463 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+        (function(){var s=localStorage.getItem('z2a-theme');var t=s||(window.matchMedia('(prefers-color-scheme:light)').matches?'light':'dark');document.documentElement.setAttribute('data-theme',t);})();
+    </script>
+    <title>概念考察：Harness Engineering、Context Engineering 与前沿范式 | zero2Agent</title>
+    <meta name="description" content="Agent 领域核心概念面试题拆解——"你了解X吗"类高频题的深度回答">
+    
+    <link rel="canonical" href="https://onefly.top/learn-agent-interview/15-agent-concepts/">
+    <!-- Open Graph -->
+    <meta property="og:title" content="概念考察：Harness Engineering、Context Engineering 与前沿范式">
+    <meta property="og:description" content="Agent 领域核心概念面试题拆解——"你了解X吗"类高频题的深度回答">
+    <meta property="og:url" content="https://onefly.top/learn-agent-interview/15-agent-concepts/">
+    <meta property="og:site_name" content="zero2Agent">
+    <meta property="og:type" content="article">
+    <meta property="og:locale" content="zh_CN">
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="概念考察：Harness Engineering、Context Engineering 与前沿范式">
+    <meta name="twitter:description" content="Agent 领域核心概念面试题拆解——"你了解X吗"类高频题的深度回答">
+    <!-- JSON-LD structured data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Article",
+      "headline": "概念考察：Harness Engineering、Context Engineering 与前沿范式",
+      "description": "Agent 领域核心概念面试题拆解——"你了解X吗"类高频题的深度回答",
+      "url": "https://onefly.top/learn-agent-interview/15-agent-concepts/",
+      "publisher": {
+        "@type": "Organization",
+        "name": "zero2Agent"
+      },
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://onefly.top/learn-agent-interview/15-agent-concepts/"
+      }
+    }
+    </script>
+    <script>
+        /* file: protocol only — for local _site preview */
+        (function () {
+            if (window.location.protocol !== "file:") return;
+            var path = window.location.pathname.replace(/\\/g, "/");
+            var marker = "/_site/";
+            var idx = path.lastIndexOf(marker);
+            if (idx < 0) return;
+            var relDir = path.slice(idx + marker.length).replace(/[^/]*$/, "");
+            var depth = relDir.split("/").filter(Boolean).length;
+            document.write('<base href="' + ("../".repeat(depth) || "./") + '">');
+        })();
+    </script>
+    <link rel="icon" type="image/svg+xml" href="/assets/images/logo.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Noto+Sans+SC:wght@400;500;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/css/docs.css?v=15">
+    <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <link id="hljs-theme" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <script>if(document.documentElement.getAttribute('data-theme')==='light'){document.getElementById('hljs-theme').href='https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css';}</script>
+    <!-- Mermaid: load + configure in <head> so it's ready before body scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@9.4.3/dist/mermaid.min.js"></script>
+    <script>
+        (function(){
+            var isLight = document.documentElement.getAttribute('data-theme') === 'light';
+            var darkVars = {
+                background: '#0a0a10', primaryColor: '#1a2535',
+                primaryTextColor: '#d1d5db', primaryBorderColor: '#334155',
+                lineColor: '#10b981', secondaryColor: '#161e2e',
+                tertiaryColor: '#161e2e', edgeLabelBackground: '#0d0d12',
+                clusterBkg: '#13131f'
+            };
+            var lightVars = {
+                background: '#ffffff', primaryColor: '#dbeafe',
+                primaryTextColor: '#1a1a2e', primaryBorderColor: '#93c5fd',
+                lineColor: '#059669', secondaryColor: '#f0fdf4',
+                tertiaryColor: '#ecfdf5', edgeLabelBackground: '#ffffff',
+                clusterBkg: '#f8fafc'
+            };
+            mermaid.initialize({
+                startOnLoad: false,
+                securityLevel: 'loose',
+                theme: isLight ? 'default' : 'dark',
+                themeVariables: Object.assign(isLight ? lightVars : darkVars, {
+                    fontFamily: '"Noto Sans SC", "Inter", sans-serif',
+                    fontSize: '14px'
+                }),
+                flowchart: { curve: 'basis', htmlLabels: false, padding: 16 },
+                sequence: {
+                    actorFontFamily: '"Noto Sans SC", sans-serif',
+                    messageFontFamily: '"Noto Sans SC", sans-serif',
+                },
+            });
+        })();
+    </script>
+</head>
+
+<body>
+    <div class="site-shell">
+        <header class="doc-header">
+            <div class="doc-header-inner">
+                <a href="/" class="brand">
+                    <img src="/assets/images/logo.svg" alt="Zero2Agent logo" class="brand-logo">
+                    <span class="brand-text">Zero2Agent</span>
+                </a>
+                <nav class="doc-nav">
+                    
+                    <a href="/learn-agent-basic/index.html"
+                       
+                       title="Agent Basic">
+                        Basic
+                    </a>
+                    
+                    <a href="/learn-langgraph/index.html"
+                       
+                       title="LangGraph">
+                        LangGraph
+                    </a>
+                    
+                    <a href="/learn-sdk-frameworks/index.html"
+                       
+                       title="SDK 框架">
+                        SDK
+                    </a>
+                    
+                    <a href="/learn-agent-survey/index.html"
+                       
+                       title="框架调研">
+                        Survey
+                    </a>
+                    
+                    <a href="/learn-openclaw/index.html"
+                       
+                       title="OpenClaw Agent">
+                        OpenClaw
+                    </a>
+                    
+                    <a href="/learn-claude-code/index.html"
+                       
+                       title="Claude Code">
+                        Claude Code
+                    </a>
+                    
+                    <a href="/learn-deepseek-harness/index.html"
+                       
+                       title="DeepSeek Harness">
+                        DSH
+                    </a>
+                    
+                    <a href="/learn-agent-training/index.html"
+                       
+                       title="Agent 训练实战">
+                        训练实战
+                    </a>
+                    
+                    <a href="/learn-agent-practice/index.html"
+                       
+                       title="Agent 应用实战">
+                        应用实战
+                    </a>
+                    
+                    <a href="/learn-pi/index.html"
+                       
+                       title="Pi Coding Agent">
+                        Pi
+                    </a>
+                    
+                    <a href="/learn-codex/index.html"
+                       
+                       title="OpenAI Codex CLI">
+                        Codex
+                    </a>
+                    
+                    <a href="/learn-agent-interview/index.html"
+                       class="is-active"
+                       title="Agent 面试通关">
+                        面试通关
+                    </a>
+                    
+                    <a href="/final-project/index.html"
+                       
+                       title="Final Project">
+                        Project
+                    </a>
+                    
+                    <div class="nav-dropdown">
+                        <button class="nav-dropdown-trigger" type="button">Zero 系列 ▾</button>
+                        <div class="nav-dropdown-menu">
+                            <a href="https://onefly.top/" target="_blank" rel="noopener">zero2Agent <span>AI Agent 工程</span></a>
+                            <a href="https://onefly.top/zero2Leetcode/" target="_blank" rel="noopener">zero2Leetcode <span>算法刷题</span></a>
+                            <a href="https://onefly.top/zero2PM/" target="_blank" rel="noopener">zero2PM <span>产品经理入门</span></a>
+                            <a href="https://onefly.top/zero2DA/" target="_blank" rel="noopener">zero2DA <span>数据分析入门</span></a>
+                        </div>
+                    </div>
+                </nav>
+                <div class="header-actions">
+                    <a class="github-star-btn" href="https://github.com/ranxi2001/zero2Agent" target="_blank" rel="noopener" aria-label="在 GitHub 为 zero2Agent 点 Star">
+                        <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 .7a11.5 11.5 0 0 0-3.64 22.41c.58.11.79-.25.79-.56v-2.22c-3.22.7-3.9-1.37-3.9-1.37-.53-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.71.08-.71 1.16.08 1.78 1.2 1.78 1.2 1.03 1.77 2.71 1.26 3.37.96.1-.75.4-1.26.73-1.55-2.57-.29-5.27-1.29-5.27-5.69 0-1.26.45-2.29 1.19-3.09-.12-.29-.52-1.47.11-3.05 0 0 .97-.31 3.16 1.18a10.94 10.94 0 0 1 5.76 0c2.19-1.49 3.16-1.18 3.16-1.18.63 1.58.23 2.76.11 3.05.74.8 1.19 1.83 1.19 3.09 0 4.41-2.71 5.39-5.29 5.68.42.36.79 1.06.79 2.14v3.16c0 .31.21.68.8.56A11.5 11.5 0 0 0 12 .7Z"/></svg>
+                        <span>Star</span>
+                        <span class="github-star-count" data-github-stars aria-label="GitHub Star 数量">—</span>
+                    </a>
+                    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="切换主题" title="切换主题">
+                        <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                        <svg class="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="doc-main">
+            <!-- Left: hierarchical navigation -->
+            <aside class="doc-sidebar">
+                <p class="sidebar-label">Learning Map</p>
+                
+                <div class="nav-module">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/learn-agent-basic/index.html"
+                           class="nav-module-link">
+                            Agent Basic
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/learn-agent-basic/01-what-is-an-agent/index.html"
+                           class="nav-article">
+                            什么是 Agent
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/02-workflow-vs-agent/index.html"
+                           class="nav-article">
+                            Workflow 和 Agent 的区别
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/03-core-components/index.html"
+                           class="nav-article">
+                            一个 Agent 系统的核心组成
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/04-why-agent-demos-break/index.html"
+                           class="nav-article">
+                            为什么很多 Agent Demo 一落地就不稳定
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/05-tool-calling-basics/index.html"
+                           class="nav-article">
+                            大模型 API 输入输出与 Tool Calling
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/06-memory-patterns/index.html"
+                           class="nav-article">
+                            Context、State 与 Memory
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/07-planning-reflection-rag/index.html"
+                           class="nav-article">
+                            Planning、Reflection、RAG 分别解决什么问题
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/08-single-vs-multi-agent/index.html"
+                           class="nav-article">
+                            单 Agent 和多 Agent 的边界
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/09-agent-infra/index.html"
+                           class="nav-article">
+                            Agent Infra：从 Harness 到生产环境
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/10-loop-engineering/index.html"
+                           class="nav-article">
+                            Loop Engineering：让 Agent 自主迭代直到正确
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/11-agent-evaluation/index.html"
+                           class="nav-article">
+                            Agent 评估：怎么知道你的 Agent 好不好
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/12-coding-agent-patterns/index.html"
+                           class="nav-article">
+                            Coding Agent：最成功的 Agent 落地形态
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/13-context-engineering/index.html"
+                           class="nav-article">
+                            Context Engineering：系统化设计模型输入
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/14-multimodal-realtime/index.html"
+                           class="nav-article">
+                            多模态与实时交互 Agent
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/15-agent-self-evolution/index.html"
+                           class="nav-article">
+                            Agent 自进化：不改权重也能持续变强
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/16-advanced-rag-memory/index.html"
+                           class="nav-article">
+                            高级 RAG 与记忆架构
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/17-async-event-driven/index.html"
+                           class="nav-article">
+                            异步 Agent 与事件驱动架构
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="nav-module">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/learn-langgraph/index.html"
+                           class="nav-module-link">
+                            LangGraph
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/learn-langgraph/01-what-is-langgraph/index.html"
+                           class="nav-article">
+                            LangGraph 是什么，为什么不用链式调用
+                        </a>
+                        
+                        
+                        <a href="/learn-langgraph/02-state-node-graph/index.html"
+                           class="nav-article">
+                            State、Node、Graph 三件套
+                        </a>
+                        
+                        
+                        <a href="/learn-langgraph/03-sequential-graph/index.html"
+                           class="nav-article">
+                            顺序图：第一个可运行的 Workflow
+                        </a>
+                        
+                        
+                        <a href="/learn-langgraph/04-conditional-edges/index.html"
+                           class="nav-article">
+                            条件分支：add_conditional_edges
+                        </a>
+                        
+                        
+                        <a href="/learn-langgraph/05-parallel-workflows/index.html"
+                           class="nav-article">
+                            并行执行：Fan-out / Fan-in
+                        </a>
+                        
+                        
+                        <a href="/learn-langgraph/06-prompt-chaining/index.html"
+                           class="nav-article">
+                            Prompt Chaining：分步生成
+                        </a>
+                        
+                        
+                        <a href="/learn-langgraph/07-llm-integration/index.html"
+                           class="nav-article">
+                            接入 LLM：OpenAI 与 HuggingFace
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="nav-module">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/learn-sdk-frameworks/index.html"
+                           class="nav-module-link">
+                            SDK 框架
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/learn-sdk-frameworks/01-openai-agents-sdk/index.html"
+                           class="nav-article">
+                            OpenAI Agents SDK：Agent、Tool、Handoff
+                        </a>
+                        
+                        
+                        <a href="/learn-sdk-frameworks/02-google-gemini-sdk/index.html"
+                           class="nav-article">
+                            Google genai SDK：Gemini + Vertex AI 多模型
+                        </a>
+                        
+                        
+                        <a href="/learn-sdk-frameworks/03-claude-anthropic-sdk/index.html"
+                           class="nav-article">
+                            Claude Anthropic SDK：Messages API 与 Tool Use
+                        </a>
+                        
+                        
+                        <a href="/learn-sdk-frameworks/04-sdk-comparison/index.html"
+                           class="nav-article">
+                            三大 SDK 横向对比：怎么选
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="nav-module">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/learn-agent-survey/index.html"
+                           class="nav-module-link">
+                            框架调研
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/learn-agent-survey/01-agentscope/index.html"
+                           class="nav-article">
+                            AgentScope：阿里的多 Agent 框架
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-survey/02-mastra/index.html"
+                           class="nav-article">
+                            Mastra：TypeScript 原生 Agent 框架
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-survey/03-semantic-kernel/index.html"
+                           class="nav-article">
+                            Semantic Kernel：微软的企业级 AI SDK
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-survey/04-eino/index.html"
+                           class="nav-article">
+                            Eino：字节跳动的 Go 语言 Agent 框架
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-survey/05-gitagent/index.html"
+                           class="nav-article">
+                            GitAgent：代码仓库智能操作
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-survey/06-harness/index.html"
+                           class="nav-article">
+                            手搓 Agent：从原理到实现
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-survey/07-agentuniverse/index.html"
+                           class="nav-article">
+                            AgentUniverse：华为的企业级 Agent 平台
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-survey/08-deerflow/index.html"
+                           class="nav-article">
+                            DeerFlow：字节跳动的 Deep Research 框架
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-survey/09-langchain/index.html"
+                           class="nav-article">
+                            LangChain：最流行的 LLM 框架
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-survey/10-google-adk/index.html"
+                           class="nav-article">
+                            Google ADK：官方 Agent 开发套件
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-survey/11-skills-claudecode/index.html"
+                           class="nav-article">
+                            Skills + Claude Code：模块化技能系统
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-survey/12-vercel-ai-sdk/index.html"
+                           class="nav-article">
+                            Vercel AI SDK：全栈 AI 应用框架
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-survey/13-autogen/index.html"
+                           class="nav-article">
+                            AutoGen：微软的多 Agent 对话框架
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="nav-module">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/learn-openclaw/index.html"
+                           class="nav-module-link">
+                            OpenClaw Agent
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/learn-openclaw/01-core-idea/index.html"
+                           class="nav-article">
+                            为什么要自己写 Agent
+                        </a>
+                        
+                        
+                        <a href="/learn-openclaw/02-node-to-agent/index.html"
+                           class="nav-article">
+                            Agent Loop：EventStream 核心循环
+                        </a>
+                        
+                        
+                        <a href="/learn-openclaw/03-rag/index.html"
+                           class="nav-article">
+                            RAG：检索增强工程实现
+                        </a>
+                        
+                        
+                        <a href="/learn-openclaw/04-tools/index.html"
+                           class="nav-article">
+                            工具系统：MCP 与并行执行
+                        </a>
+                        
+                        
+                        <a href="/learn-openclaw/05-memory/index.html"
+                           class="nav-article">
+                            Context Engine：记忆架构
+                        </a>
+                        
+                        
+                        <a href="/learn-openclaw/06-multi-agent/index.html"
+                           class="nav-article">
+                            Multi-Agent：隔离与路由
+                        </a>
+                        
+                        
+                        <a href="/learn-openclaw/07-pi-mono/index.html"
+                           class="nav-article">
+                            读懂 pi-mono 源码
+                        </a>
+                        
+                        
+                        <a href="/learn-openclaw/08-build-openclaw/index.html"
+                           class="nav-article">
+                            构建你的 OpenClaw
+                        </a>
+                        
+                        
+                        <a href="/learn-openclaw/09-interview/index.html"
+                           class="nav-article">
+                            面试与实习准备
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="nav-module">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/learn-claude-code/index.html"
+                           class="nav-module-link">
+                            Claude Code
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/learn-claude-code/01-agent-loop/index.html"
+                           class="nav-article">
+                            Agent Loop：一个循环就是一个 Agent
+                        </a>
+                        
+                        
+                        <a href="/learn-claude-code/02-tool-use/index.html"
+                           class="nav-article">
+                            Tool Use：扩展模型能触达的边界
+                        </a>
+                        
+                        
+                        <a href="/learn-claude-code/03-todo-write/index.html"
+                           class="nav-article">
+                            TodoWrite：让 Agent 不再迷路
+                        </a>
+                        
+                        
+                        <a href="/learn-claude-code/04-subagent/index.html"
+                           class="nav-article">
+                            Subagent：上下文隔离的正确姿势
+                        </a>
+                        
+                        
+                        <a href="/learn-claude-code/05-skill-loading/index.html"
+                           class="nav-article">
+                            Skill Loading：按需加载领域知识
+                        </a>
+                        
+                        
+                        <a href="/learn-claude-code/06-context-compact/index.html"
+                           class="nav-article">
+                            Context Compact：三层压缩换无限会话
+                        </a>
+                        
+                        
+                        <a href="/learn-claude-code/07-task-system/index.html"
+                           class="nav-article">
+                            Task System：持久化任务图
+                        </a>
+                        
+                        
+                        <a href="/learn-claude-code/08-background-tasks/index.html"
+                           class="nav-article">
+                            Background Tasks：非阻塞工具执行
+                        </a>
+                        
+                        
+                        <a href="/learn-claude-code/09-agent-teams/index.html"
+                           class="nav-article">
+                            Agent Teams：多 Agent 协作
+                        </a>
+                        
+                        
+                        <a href="/learn-claude-code/10-team-protocols/index.html"
+                           class="nav-article">
+                            Team Protocols：结构化通信协议
+                        </a>
+                        
+                        
+                        <a href="/learn-claude-code/11-autonomous-agents/index.html"
+                           class="nav-article">
+                            Autonomous Agents：自组织团队
+                        </a>
+                        
+                        
+                        <a href="/learn-claude-code/12-worktree-isolation/index.html"
+                           class="nav-article">
+                            Worktree 隔离：多 Agent 并行不踩踏
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="nav-module">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/learn-deepseek-harness/index.html"
+                           class="nav-module-link">
+                            DeepSeek Harness
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/learn-deepseek-harness/01-what-is-harness/index.html"
+                           class="nav-article">
+                            DeepSeek Harness：一切皆插件的 Agent 运行时
+                        </a>
+                        
+                        
+                        <a href="/learn-deepseek-harness/02-cordis-plugin-kernel/index.html"
+                           class="nav-article">
+                            声明式与命令式：Cordis 的五个核心概念
+                        </a>
+                        
+                        
+                        <a href="/learn-deepseek-harness/03-profile-bundle-patch/index.html"
+                           class="nav-article">
+                            运行中的 DSH：插件树、组合层与能力接缝
+                        </a>
+                        
+                        
+                        <a href="/learn-deepseek-harness/04-llm-seam/index.html"
+                           class="nav-article">
+                            LLM 接缝：把模型差异关在适配器里
+                        </a>
+                        
+                        
+                        <a href="/learn-deepseek-harness/05-agent-loop/index.html"
+                           class="nav-article">
+                            Agent Loop：控制平面如何推进任务
+                        </a>
+                        
+                        
+                        <a href="/learn-deepseek-harness/06-tool-pipeline/index.html"
+                           class="nav-article">
+                            Tool Pipeline：能力为什么不能直接等于权限
+                        </a>
+                        
+                        
+                        <a href="/learn-deepseek-harness/07-session-log/index.html"
+                           class="nav-article">
+                            Session Log：为什么日志就是事实源
+                        </a>
+                        
+                        
+                        <a href="/learn-deepseek-harness/08-inbox-control/index.html"
+                           class="nav-article">
+                            Inbox 控制：为什么用户插话必须有自己的语义
+                        </a>
+                        
+                        
+                        <a href="/learn-deepseek-harness/09-code-mode/index.html"
+                           class="nav-article">
+                            Code Mode：上下文压缩不等于安全隔离
+                        </a>
+                        
+                        
+                        <a href="/learn-deepseek-harness/10-context-compaction-cost/index.html"
+                           class="nav-article">
+                            Context Compaction：把上下文当作工作集管理
+                        </a>
+                        
+                        
+                        <a href="/learn-deepseek-harness/11-security-boundary/index.html"
+                           class="nav-article">
+                            安全边界：把信任放到模型之外
+                        </a>
+                        
+                        
+                        <a href="/learn-deepseek-harness/12-subagent-orchestration/index.html"
+                           class="nav-article">
+                            Subagent 编排：扩展能力而不是复制 Loop
+                        </a>
+                        
+                        
+                        <a href="/learn-deepseek-harness/13-runtime-surfaces/index.html"
+                           class="nav-article">
+                            Runtime Surfaces：一套运行时如何服务多个宿主
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="nav-module">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/learn-agent-training/index.html"
+                           class="nav-module-link">
+                            Agent 训练实战
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/learn-agent-training/01-agent-sft/index.html"
+                           class="nav-article">
+                            Agent SFT 关键细节：从轨迹数据到 Loss Mask
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-training/02-agent-rl/index.html"
+                           class="nav-article">
+                            Agent RL 实战：用强化学习提升推理与决策质量
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-training/03-grpo-vs-ppo/index.html"
+                           class="nav-article">
+                            GRPO vs PPO：Agent 强化学习算法深度对比与选型
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-training/04-data-mix/index.html"
+                           class="nav-article">
+                            训练数据配比实战：Agent 不只吃轨迹数据
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-training/05-agent-eval/index.html"
+                           class="nav-article">
+                            Agent 评测：怎么衡量训练效果
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-training/06-train-to-deploy/index.html"
+                           class="nav-article">
+                            从 SFT 到部署：Agent 模型上线全流程
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-training/07-training-environment-engineering/index.html"
+                           class="nav-article">
+                            Agent 训练环境工程：从仿真沙箱到数据回流闭环
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="nav-module">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/learn-agent-practice/index.html"
+                           class="nav-module-link">
+                            Agent 应用实战
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/learn-agent-practice/01-vibe-coding-homepage/index.html"
+                           class="nav-article">
+                            从 0 开始 Vibe Coding：用 Codex 发布个人主页
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-practice/02-ai-coding-interview/index.html"
+                           class="nav-article">
+                            AI Coding 面试：解题流程与交付策略
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-practice/03-daily-dev-workflow/index.html"
+                           class="nav-article">
+                            日常开发中的 Agent 工作流
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-practice/04-auto-harness/index.html"
+                           class="nav-article">
+                            Auto Harness 迭代实战
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-practice/05-eval-driven-practice/index.html"
+                           class="nav-article">
+                            Eval-Driven Agent Practice：用评估驱动 Agent 工作流迭代
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="nav-module">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/learn-pi/index.html"
+                           class="nav-module-link">
+                            Pi Coding Agent
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/learn-pi/01-what-is-pi/index.html"
+                           class="nav-article">
+                            Pi 是什么：定位、架构与 Agent Loop
+                        </a>
+                        
+                        
+                        <a href="/learn-pi/02-pi-ai-provider/index.html"
+                           class="nav-article">
+                            pi-ai：统一多 Provider 的适配层设计
+                        </a>
+                        
+                        
+                        <a href="/learn-pi/03-extension-system/index.html"
+                           class="nav-article">
+                            扩展体系：Skill、Extension 与 Package
+                        </a>
+                        
+                        
+                        <a href="/learn-pi/04-mcp-adapter/index.html"
+                           class="nav-article">
+                            Pi 为什么不内置 MCP：Adapter 与 Token 取舍
+                        </a>
+                        
+                        
+                        <a href="/learn-pi/05-security-model/index.html"
+                           class="nav-article">
+                            安全模型：Project Trust、权限门禁与系统隔离
+                        </a>
+                        
+                        
+                        <a href="/learn-pi/06-ecosystem/index.html"
+                           class="nav-article">
+                            生态使用：发现、审计与退出策略
+                        </a>
+                        
+                        
+                        <a href="/learn-pi/07-comparison/index.html"
+                           class="nav-article">
+                            Pi vs Claude Code vs DSH：按约束选择 Harness
+                        </a>
+                        
+                        
+                        <a href="/learn-pi/08-session-runtime/index.html"
+                           class="nav-article">
+                            Session Runtime：树形历史、恢复与 Compaction
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="nav-module">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/learn-codex/index.html"
+                           class="nav-module-link">
+                            OpenAI Codex CLI
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/learn-codex/01-what-is-codex/index.html"
+                           class="nav-article">
+                            Codex CLI 是什么：定位、架构与 Agent Loop
+                        </a>
+                        
+                        
+                        <a href="/learn-codex/02-config-permission/index.html"
+                           class="nav-article">
+                            配置与权限系统：TOML 层级与三种审批策略
+                        </a>
+                        
+                        
+                        <a href="/learn-codex/03-sandbox-security/index.html"
+                           class="nav-article">
+                            沙箱与安全模型：平台原生隔离的工程边界
+                        </a>
+                        
+                        
+                        <a href="/learn-codex/04-mcp-integration/index.html"
+                           class="nav-article">
+                            MCP 深度集成：工具协议与审批边界
+                        </a>
+                        
+                        
+                        <a href="/learn-codex/05-codex-sdk/index.html"
+                           class="nav-article">
+                            Codex SDK：Thread-based 编程式 Agent 接口
+                        </a>
+                        
+                        
+                        <a href="/learn-codex/06-developer-experience/index.html"
+                           class="nav-article">
+                            开发者体验与生态评估
+                        </a>
+                        
+                        
+                        <a href="/learn-codex/07-codex-vs-claude-code/index.html"
+                           class="nav-article">
+                            Codex vs Claude Code vs DSH
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="nav-module is-open">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/learn-agent-interview/index.html"
+                           class="nav-module-link is-active">
+                            Agent 面试通关
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/learn-agent-interview/01-architecture-design/index.html"
+                           class="nav-article">
+                            架构选型
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/02-tool-management/index.html"
+                           class="nav-article">
+                            工具管理
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/03-fault-tolerance/index.html"
+                           class="nav-article">
+                            容错与鲁棒性
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/04-memory-context/index.html"
+                           class="nav-article">
+                            记忆与上下文
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/05-eval-and-vision/index.html"
+                           class="nav-article">
+                            评估与全局观
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/06-multi-agent-collab/index.html"
+                           class="nav-article">
+                            多智能体协作
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/07-engineering-pitfalls/index.html"
+                           class="nav-article">
+                            工程化踩坑
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/08-prompt-engineering/index.html"
+                           class="nav-article">
+                            Prompt 工程与框架原理
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/09-rag-retrieval/index.html"
+                           class="nav-article">
+                            RAG 与检索系统
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/10-training-and-data/index.html"
+                           class="nav-article">
+                            训练、数据与模型优化
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/11-ai-code-testing/index.html"
+                           class="nav-article">
+                            AI 代码分析与测试
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/12-business-ai-engineering/index.html"
+                           class="nav-article">
+                            业务 AI 工程分析
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/13-project-deep-dive/index.html"
+                           class="nav-article">
+                            简历项目拷打
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/14-company-preferences/index.html"
+                           class="nav-article">
+                            各公司面试偏好
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/15-agent-concepts/index.html"
+                           class="nav-article is-current">
+                            概念考察
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="nav-module">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/final-project/index.html"
+                           class="nav-module-link">
+                            Final Project
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/final-project/01-prd/index.html"
+                           class="nav-article">
+                            PRD：产品需求文档
+                        </a>
+                        
+                        
+                        <a href="/final-project/02-architecture/index.html"
+                           class="nav-article">
+                            系统架构设计
+                        </a>
+                        
+                        
+                        <a href="/final-project/03-query-engine/index.html"
+                           class="nav-article">
+                            Query Engine 实现
+                        </a>
+                        
+                        
+                        <a href="/final-project/04-tools-skills/index.html"
+                           class="nav-article">
+                            Tools & Skills 实现
+                        </a>
+                        
+                        
+                        <a href="/final-project/05-knowledge-base/index.html"
+                           class="nav-article">
+                            知识库构建
+                        </a>
+                        
+                        
+                        <a href="/final-project/06-context-memory/index.html"
+                           class="nav-article">
+                            Context & Memory
+                        </a>
+                        
+                        
+                        <a href="/final-project/07-permission-session/index.html"
+                           class="nav-article">
+                            Permission & Session
+                        </a>
+                        
+                        
+                        <a href="/final-project/08-hook-command/index.html"
+                           class="nav-article">
+                            Hook & Command
+                        </a>
+                        
+                        
+                        <a href="/final-project/09-sub-agent/index.html"
+                           class="nav-article">
+                            Sub-agent 编排
+                        </a>
+                        
+                        
+                        <a href="/final-project/10-stt-speech/index.html"
+                           class="nav-article">
+                            STT 集成与语音分析
+                        </a>
+                        
+                        
+                        <a href="/final-project/11-deploy-demo/index.html"
+                           class="nav-article">
+                            部署与演示
+                        </a>
+                        
+                        
+                        <a href="/final-project/12-web-ui/index.html"
+                           class="nav-article">
+                            Web UI 交互设计
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+            </aside>
+
+            <!-- Center: article content -->
+            <article class="doc-article">
+                
+                <p class="doc-eyebrow">Agent 面试通关 / 15</p>
+                
+                <h1 id="概念考察harness-engineeringcontext-engineering-与前沿范式">概念考察：Harness Engineering、Context Engineering 与前沿范式</h1>
+
+<p>2026 年面试出现了一类新题型：面试官直接问“你了解 X 吗？”——不考具体实现，考的是<strong>你对 Agent 领域前沿概念的认知深度和独立思考</strong>。</p>
+
+<p>这类题的特点是：答浅了（“听说过”）等于没答，答深了需要展示<strong>概念的本质、演进逻辑、与相关概念的区别、以及你的判断</strong>。</p>
+
+<hr />
+
+<h2 id="harness-engineering">Harness Engineering</h2>
+
+<h3 id="qharness-engineering-是什么如果让你构建一个-harness-体系你会做哪些工作">Q：Harness Engineering 是什么？如果让你构建一个 Harness 体系，你会做哪些工作？</h3>
+
+<blockquote>
+  <p>来源：快手 AI业务应用设计开发 【字节后端开发日常实习二面同题：“harness有了解吗”】【腾讯AI后端开发一面同题：“了解harness嘛，具体是做什么的”】【美团Agent方向面经同题：“harness工程了解吗？主要内容？项目里怎么用？还能补什么？”】【社招五年Go面经同题：“了解harness engineer吗”】【腾讯音乐暑期+日常同题：“有了解过Harness么？有用过Harness么？”】</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“好像是跟测试框架有关的东西？不太了解。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>Harness 的原意是“线束”——把散乱的线缆约束成有序的束。在 Agent 工程中，<strong>Harness Engineering 是用工程化手段约束和增强 Agent 行为的系统方法论</strong>。核心思想：模型是引擎，Harness 是方向盘、安全带和仪表盘。</p>
+
+<p>具体来说，Harness 包含三层：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>层次</th>
+      <th>职责</th>
+      <th>典型实现</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>约束层</strong></td>
+      <td>告诉 Agent 什么能做、什么不能做</td>
+      <td>Rules（CLAUDE.md）、安全护栏、权限白名单</td>
+    </tr>
+    <tr>
+      <td><strong>增强层</strong></td>
+      <td>给 Agent 提供可复用的能力和知识</td>
+      <td>Skills、动态工具注册、上下文模板</td>
+    </tr>
+    <tr>
+      <td><strong>验证层</strong></td>
+      <td>评估 Agent 行为是否符合预期</td>
+      <td>可重复评测环境、自动打分、日志采集、回归测试</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>如果让我从零构建 Harness 体系，关键工作</strong>：</p>
+
+<pre><code class="language-mermaid">flowchart TB
+    subgraph constrain["约束层"]
+        C1["定义行为边界\nRules/安全护栏"]
+        C2["权限分级\n工具白名单/敏感操作审批"]
+        C3["输出校验\n格式检查/合规过滤"]
+    end
+    
+    subgraph enhance["增强层"]
+        E1["Skill 体系\n可复用能力单元"]
+        E2["上下文工程\n动态注入/渐进披露"]
+        E3["Hooks 自动化\n事件驱动的增强行为"]
+    end
+    
+    subgraph verify["验证层"]
+        V1["可重复环境\n固定镜像/标准输入输出"]
+        V2["自动评测\n回归用例/版本对比"]
+        V3["可观测性\n全链路日志/决策归因"]
+    end
+    
+    constrain --&gt; enhance --&gt; verify
+    verify --&gt;|"反馈驱动迭代"| constrain
+</code></pre>
+
+<p><strong>验证层是最容易被忽视但最关键的</strong>——没有可重复的评测环境，你不知道 Prompt 改动是变好了还是变差了。我们项目里用 Harness 做三件事：① 回归固定用例（确保改动不破坏已有能力）；② 对比 Prompt/模型版本（量化改进效果）；③ 日志归因（失败时精准定位是约束不够、工具出错、还是模型幻觉）。</p>
+
+<p><strong>可以补充的方向</strong>：更接近真实业务的“半合成”评测环境（不是纯 mock，而是真实 API + 可控输入）、对抗性用例（测试安全边界）、成本与性能的持续监控。</p>
+
+<p><strong>差距在哪</strong>：新手不了解这个概念，或只知道“跟测试有关”。高手能讲清 Harness 的三层结构（约束/增强/验证）和核心价值（不是规定 Agent 怎么做，而是确保它在安全范围内自主做事），且能给出具体的构建方案。面试官考的是你对“Agent 工程化”这件事有多深的理解——是只会调 Prompt，还是能搭建完整的工程保障体系。</p>
+
+<hr />
+
+<h3 id="qprompt-engineeringcontext-engineeringharness-engineering-三者有什么区别">Q：Prompt Engineering、Context Engineering、Harness Engineering 三者有什么区别？</h3>
+
+<blockquote>
+  <p>来源：阿里淘天 Agent开发 日常实习一面</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“Prompt Engineering 是写提示词，其他两个不太清楚。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>这三个“工程”代表三种关注范围。业界常把关注重点从 Prompt 扩展到 Context、再扩展到 Harness 描述成一种演进，但它们会同时存在，并不是互斥或严格逐层的架构：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>维度</th>
+      <th>Prompt Engineering</th>
+      <th>Context Engineering</th>
+      <th>Harness Engineering</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>核心关注</strong></td>
+      <td>怎么写指令让模型听话</td>
+      <td>怎么给模型恰好的信息</td>
+      <td>怎么用工程体系约束和增强模型</td>
+    </tr>
+    <tr>
+      <td><strong>操作对象</strong></td>
+      <td>System Prompt 文本</td>
+      <td>整个上下文窗口的内容编排</td>
+      <td>模型之外的全套基础设施</td>
+    </tr>
+    <tr>
+      <td><strong>典型手段</strong></td>
+      <td>Few-shot、CoT、角色设定</td>
+      <td>动态注入、记忆召回、渐进披露、工具描述编排</td>
+      <td>Rules、Skills、Hooks、评测管线、安全护栏</td>
+    </tr>
+    <tr>
+      <td><strong>解决的问题</strong></td>
+      <td>模型不知道该做什么</td>
+      <td>模型缺少做事需要的信息</td>
+      <td>模型做事时缺少约束和保障</td>
+    </tr>
+    <tr>
+      <td><strong>类比</strong></td>
+      <td>写说明书</td>
+      <td>准备材料和工具</td>
+      <td>搭建整条生产线</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>为什么会演进</strong>：</p>
+
+<p><strong>Prompt Engineering 的瓶颈</strong>：模型能力提升后，精心调优的 Prompt 不再是瓶颈——模型已经“聪明到不需要手把手教”。真正的瓶颈变成了“给它什么信息”。</p>
+
+<p><strong>Context Engineering 的瓶颈</strong>：即使上下文信息完美，模型仍然会犯错——选错工具、幻觉、死循环、违反安全规则。纯靠上下文无法解决“如何保障行为正确性”的问题。</p>
+
+<p><strong>Harness Engineering 的价值</strong>：把保障能力从模型内部（靠 Prompt 约束）转移到模型外部（靠工程体系保障）。模型负责“思考和执行”，Harness 负责“约束、增强和验证”。</p>
+
+<p><strong>一句话总结</strong>：Prompt Engineering 解决“说什么”，Context Engineering 解决“给什么”，Harness Engineering 解决“怎么保障”。</p>
+
+<p><strong>差距在哪</strong>：新手只知道 Prompt Engineering，对后两者模糊。高手能清晰区分三者的操作对象和责任边界，也知道它们在同一个系统中互相配合。面试官考的是你对 Agent 工程方法论的全景认知。</p>
+
+<p><strong>追问变体</strong>：加入 Loop Engineering 作为第四个观察视角（来源：成都某中厂 Agent 产品开发实习）——Loop Engineering 指的是对 Agent 执行循环的退出条件、纠错策略和资源约束进行系统化设计。它通常是 Harness 内部的循环控制部分，不是凌驾于 Harness 之上的独立层级；Harness 还包括上下文装配、工具权限、验证和人工审批等循环之外的能力。</p>
+
+<hr />
+
+<h3 id="q讲一讲-agent-的发展路线从以前的架构到现在的-harness-engineering">Q：讲一讲 Agent 的发展路线——从以前的架构到现在的 Harness Engineering</h3>
+
+<blockquote>
+  <p>来源：阿里淘天 AI应用开发 暑期二面</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“以前是 ReAct，现在有了 MCP 和多 Agent。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>Agent 架构的演进可以分为四个阶段，每个阶段解决的核心问题不同：</p>
+
+<pre><code class="language-mermaid">flowchart LR
+    A["2023\nPrompt Chain"] --&gt; B["2024 H1\nAgent Framework"]
+    B --&gt; C["2024 H2\nAgent + Workflow 混合"]
+    C --&gt; D["2025-2026\nHarness Engineering"]
+    
+    A1["问题：能力固定\n不够灵活"] -.-&gt; A
+    B1["问题：纯自主\n不够可控"] -.-&gt; B
+    C1["问题：可控了\n但工程保障缺失"] -.-&gt; C
+    D1["解决：全套工程体系\n约束+增强+验证"] -.-&gt; D
+</code></pre>
+
+<p><strong>阶段 1：Prompt Chain（2023）</strong></p>
+
+<p>代表：LangChain 的 SequentialChain、Flowise 等。本质是预定义的流程图——每个节点做一件事，按固定顺序执行。优点是可预测，缺点是不灵活——遇到预期之外的情况无法应对。</p>
+
+<p><strong>阶段 2：Autonomous Agent（2024 上半年）</strong></p>
+
+<p>代表：AutoGPT、BabyAGI、早期 ReAct Agent。让模型自主规划和执行，不限制路径。优点是灵活，缺点是极度不可控——死循环、幻觉、胡乱调工具。大量团队发现“Demo 很惊艳，上线就崩”。</p>
+
+<p><strong>阶段 3：Workflow + Agent 混合（2024 下半年）</strong></p>
+
+<p>代表：LangGraph 的状态机、Dify 的工作流。核心思想是“确定性环节用 Workflow 控制，不确定性环节嵌入 Agent 节点”。解决了可控性问题，但缺少系统性的工程保障——评测靠手动、约束写在 Prompt 里容易被忽略、没有持续验证机制。</p>
+
+<p><strong>阶段 4：Harness Engineering（2025-2026）</strong></p>
+
+<p>代表：Claude Code 的 Rules/Skills/Hooks 体系、企业级 Agent 平台。核心转变是<strong>把 Agent 的保障能力从模型内部迁移到外部工程体系</strong>：</p>
+
+<ul>
+  <li>约束不再写在 Prompt 里（容易被忽略）→ 用 Rules 和权限系统强制执行</li>
+  <li>能力不再硬编码 → 用 Skills 实现可复用、可组合、可热更新</li>
+  <li>质量不再靠手动检查 → 用持续评测管线自动验证</li>
+  <li>行为不再是黑盒 → 用全链路 Trace 实现可观测</li>
+</ul>
+
+<p><strong>本质变化</strong>：从“让模型更强”转向“让模型周围的工程体系更强”。模型能力是给定的（你不能改 GPT-4 的权重），但 Harness 是你能控制的——这才是工程师的主战场。</p>
+
+<p><strong>差距在哪</strong>：新手只能说出技术名词（ReAct、MCP），但说不清“为什么从 A 演进到 B”。高手能讲清每个阶段解决的问题和暴露的新瓶颈，形成“问题→解法→新问题→新解法”的递进逻辑。面试官考的是你对 Agent 技术演进有没有结构化的认知——不是背时间线，而是理解每一步“为什么”。</p>
+
+<hr />
+
+<h3 id="q你的项目中体现了哪些-harness-engineering-的思想">Q：你的项目中体现了哪些 Harness Engineering 的思想？</h3>
+
+<blockquote>
+  <p>来源：阿里国际 一面</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“我用了 System Prompt 来约束模型行为，算 Harness 吗？”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>System Prompt 约束只是 Harness 最原始的形态。真正的 Harness Engineering 思想体现在<strong>模型外部的工程保障是否系统化</strong>。我的项目中有三个层面的体现：</p>
+
+<p><strong>1. 约束层：行为边界不依赖 Prompt 遵循</strong></p>
+
+<ul>
+  <li>工具调用前有<strong>参数校验中间层</strong>——模型传的参数必须符合 JSON Schema，不符合直接拦截并给模型结构化错误信息，而不是让模型“自己注意”</li>
+  <li>敏感操作（删除数据、发送消息）有<strong>人工确认门控</strong>——不是在 Prompt 里写“重要操作要确认”，而是在代码层面强制拦截</li>
+  <li>执行有<strong>硬性预算</strong>——最大步数、最大 token 消耗、最大工具调用次数，超过直接终止</li>
+</ul>
+
+<p><strong>2. 增强层：能力可复用且按需加载</strong></p>
+
+<ul>
+  <li>将常见任务的最佳实践抽象为 <strong>Skill 文件</strong>——新人接手项目不需要重新摸索“怎么做代码审查”或“怎么处理部署”，Skill 里有完整的步骤和约束</li>
+  <li>上下文采用<strong>渐进式披露</strong>——不是把所有信息塞给模型，而是先给摘要，需要时再展开细节</li>
+  <li>工具描述<strong>动态精简</strong>——根据当前任务只注入相关工具子集，而不是 100 个工具的描述全部塞进上下文</li>
+</ul>
+
+<p><strong>3. 验证层：改动效果可量化</strong></p>
+
+<ul>
+  <li>维护了一个<strong>核心评测集</strong>（50+ 条覆盖主要场景的 case），每次改 Prompt 或切模型后必须跑回归</li>
+  <li>全链路<strong>结构化日志</strong>——每个决策节点（意图识别→规划→工具选择→执行→生成）都记录输入输出，失败时能精准归因</li>
+  <li>线上有<strong>异常模式告警</strong>——步数异常多、重复调用同一工具、输出过长等模式自动报警</li>
+</ul>
+
+<p><strong>差距在哪</strong>：新手把 Harness 等同于“写了 System Prompt”。高手能从约束/增强/验证三层展示自己项目中的工程化实践——不是“有没有用 Harness”的问题，而是“你的工程保障做到了什么程度”。面试官考的是你有没有系统性工程思维，以及能否把抽象概念落地到真实项目。</p>
+
+<hr />
+
+<h2 id="vibe-coding-vs-harness">Vibe Coding vs Harness</h2>
+
+<h3 id="qvibe-coding-和-harness你更偏向哪种路线为什么">Q：Vibe Coding 和 Harness，你更偏向哪种路线？为什么？</h3>
+
+<blockquote>
+  <p>来源：字节 TikTok 实习后端AI开发 一面</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“Vibe Coding 就是用 AI 写代码吧，Harness 我不太清楚。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>这两个代表了 AI 辅助开发的<strong>两种哲学</strong>——不是非此即彼，而是适用于不同阶段和场景：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>维度</th>
+      <th>Vibe Coding</th>
+      <th>Harness</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>核心理念</strong></td>
+      <td>人机协作靠“感觉”——快速生成、直觉验证</td>
+      <td>人机协作靠“约束”——结构化流程、工程化保障</td>
+    </tr>
+    <tr>
+      <td><strong>开发方式</strong></td>
+      <td>用自然语言描述意图，AI 生成，凭感觉判断对错</td>
+      <td>定义 Rules/Skills/评测，AI 在约束内执行</td>
+    </tr>
+    <tr>
+      <td><strong>适合场景</strong></td>
+      <td>原型验证、探索性开发、小工具</td>
+      <td>生产系统、团队协作、长期维护</td>
+    </tr>
+    <tr>
+      <td><strong>核心优势</strong></td>
+      <td>极高的开发速度、极低的启动成本</td>
+      <td>可复现、可审计、可持续迭代</td>
+    </tr>
+    <tr>
+      <td><strong>核心风险</strong></td>
+      <td>不可审计、不可复现、个人依赖</td>
+      <td>前期投入大、灵活性受限</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>我的判断</strong>：两者不是替代关系，而是<strong>开发生命周期的不同阶段</strong>：</p>
+
+<pre><code class="language-mermaid">flowchart LR
+    A["Vibe Coding\n快速原型"] --&gt; B["验证可行性"]
+    B --&gt; C["Harness Engineering\n工程化落地"]
+    C --&gt; D["持续迭代"]
+    D --&gt;|"探索新方向"| A
+</code></pre>
+
+<ul>
+  <li><strong>0→1 阶段用 Vibe Coding</strong>：快速试错，验证想法是否可行。此时约束太多反而降低创造力</li>
+  <li><strong>1→N 阶段用 Harness</strong>：把验证通过的方案工程化——加约束保安全、加 Skill 保复用、加评测保质量</li>
+</ul>
+
+<p><strong>如果只能选一个，我选 Harness</strong>——因为面试官问这个问题的背景是“你要加入我们的生产系统”。生产系统的核心需求是可控性和可维护性，Vibe Coding 无法满足。但我不会否定 Vibe Coding 的价值——它在探索阶段是最高效的工具。</p>
+
+<p><strong>差距在哪</strong>：新手不了解两者的区别，或只认识 Vibe Coding。高手能讲清两种路线的适用场景和本质差异，且能结合面试岗位的需求给出有判断力的回答。面试官考的不是“你选哪个”，而是“你能不能看清两者的本质，并在具体场景下做出合理选择”。</p>
+
+<hr />
+
+<h2 id="前沿概念辨析">前沿概念辨析</h2>
+
+<h3 id="q你会关注-harnesscontext-engineering-这类行业热点吗你觉得它们有什么优势劣势">Q：你会关注 Harness、Context Engineering 这类行业热点吗？你觉得它们有什么优势劣势？</h3>
+
+<blockquote>
+  <p>来源：腾讯 CDG 产品经理（技术背景）一面 【腾讯音乐追问：“为什么没用过这些来辅助提升效率？”】</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“关注，我看到过这些词。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>会关注，而且我认为需要<strong>区分“概念创新”和“营销术语”</strong>——Agent 领域概念更迭很快，但真正改变工程实践的不多。我的判断标准是：<strong>这个概念有没有解决一个以前解决不了的问题？</strong></p>
+
+<table>
+  <thead>
+    <tr>
+      <th>概念</th>
+      <th>解决的真实问题</th>
+      <th>优势</th>
+      <th>劣势/局限</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Harness Engineering</strong></td>
+      <td>Agent 行为不可控、改动无法验证</td>
+      <td>把保障从模型内部迁到外部，工程师可控</td>
+      <td>前期搭建成本高，简单项目是过度工程化</td>
+    </tr>
+    <tr>
+      <td><strong>Context Engineering</strong></td>
+      <td>模型有能力但缺信息</td>
+      <td>精准投喂比精细 Prompt 更高效</td>
+      <td>对上下文窗口大小有硬依赖，窗口不够仍是瓶颈</td>
+    </tr>
+    <tr>
+      <td><strong>MCP/A2A</strong></td>
+      <td>工具和 Agent 之间的连接缺乏标准</td>
+      <td>协议标准化后组件可复用</td>
+      <td>生态还在早期，协议本身在快速迭代中</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>这些概念的共同趋势</strong>：从“让模型更强”转向“让模型周围的工程更强”。这说明行业进入了工程化阶段——模型能力已经足够，瓶颈在于怎么可靠地把能力落地。</p>
+
+<p><strong>我没有盲目追每个热词</strong>，而是看它是否能解决我当前项目的具体痛点。比如 Harness 中的评测管线思想，我已经在项目里落地了（每次改 Prompt 跑回归评测集）；但 A2A 协议我还没有使用场景，所以只保持关注不深入投入。</p>
+
+<p><strong>差距在哪</strong>：新手只能说“看到过这些词”。高手对每个概念有独立判断（解决什么问题、有什么局限），且能说清自己的取舍逻辑。面试官考的是你对行业动态的<strong>批判性思考能力</strong>——不是追热点，而是能辨别哪些值得投入。</p>
+
+<hr />
+
+<h3 id="qharnesshermes-这种比较新的-agent-设计了解吗">Q：Harness、Hermes 这种比较新的 Agent 设计了解吗？</h3>
+
+<blockquote>
+  <p>来源：字节 大模型算法 暑期实习 二面</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“Harness 听说过，Hermes 不了解。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>两者代表了 Agent 设计的两个不同方向——<strong>外部约束 vs 内部增强</strong>：</p>
+
+<p><strong>Harness（外部约束工程）</strong>：</p>
+
+<p>核心思想是“模型不变，改周围的工程体系”。通过 Rules、Skills、Hooks、评测管线等外部机制，约束和增强 Agent 行为。优势是<strong>不需要训练模型</strong>，任何团队都能快速搭建；劣势是完全依赖模型的指令遵循能力，模型“不听话”时约束可能失效。</p>
+
+<p><strong>Hermes（内部能力增强）</strong>：</p>
+
+<p>Hermes 是 Nous Research 的开源微调模型系列，核心思想是通过<strong>训练让模型内化 Agent 能力</strong>——工具调用格式、多轮推理模式、结构化输出等能力直接训练进模型权重。优势是模型本身就具备 Agent 行为，不需要复杂的外部框架；劣势是需要训练资源，且模型能力固定后不易调整。</p>
+
+<p><strong>两者的关系</strong>：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Harness（外部）和 Hermes（内部）不矛盾——最佳实践是结合：
+  - 用 Hermes 类模型获得更强的基础 Agent 能力
+  - 用 Harness 工程体系保障行为可控和可验证
+  - 模型提供能力上限，Harness 提供安全下限
+</code></pre></div></div>
+
+<p><strong>差距在哪</strong>：新手只知道名字。高手能区分两者的设计哲学（外部约束 vs 内部增强），且理解它们是互补而非替代的关系。面试官考的是你对 Agent 设计范式的全面认知。</p>
+
+<hr />
+
+<h2 id="协议标准化mcp">协议标准化：MCP</h2>
+
+<h3 id="qmcp-是什么它解决了-function-calling-的什么根本问题">Q：MCP 是什么？它解决了 Function Calling 的什么根本问题？</h3>
+
+<blockquote>
+  <p>来源：蚂蚁集团智能体与大模型应用二面 【蚂蚁Agent开发一面追问：“有了FC是否可以没有MCP”】【高德实习一面同题：“MCP协议的完整调用过程”】【字节实习Agent开发一面追问：“MCP和Function Calling的关系”】</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“MCP 就是 Anthropic 出的一个调用工具的协议，跟 Function Calling 差不多。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>MCP（Model Context Protocol）和 Function Calling 解决的是<strong>不同层面的问题</strong>——把两者等同是最常见的误区。</p>
+
+<p><strong>Function Calling 解决的是“模型怎么表达工具调用意图”</strong>：</p>
+
+<p>模型输出一段结构化 JSON（工具名 + 参数），宿主程序解析后执行。FC 是模型侧的能力——让模型能以结构化格式表达“我想调用什么”。</p>
+
+<p><strong>MCP 解决的是“工具怎么被发现、连接和管理”</strong>：</p>
+
+<p>MCP 是一个<strong>连接协议</strong>——定义了 Agent（Client）和工具提供者（Server）之间的通信标准。类比：FC 是“会说话”，MCP 是“有电话网络”。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>维度</th>
+      <th>Function Calling</th>
+      <th>MCP</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>解决的问题</strong></td>
+      <td>模型如何结构化表达工具调用</td>
+      <td>工具如何被发现、连接、调用</td>
+    </tr>
+    <tr>
+      <td><strong>协议层级</strong></td>
+      <td>模型输出格式规范</td>
+      <td>客户端-服务器通信协议</td>
+    </tr>
+    <tr>
+      <td><strong>工具注册</strong></td>
+      <td>硬编码在 Prompt 或 API 参数中</td>
+      <td>动态发现——Server 声明自己有什么能力</td>
+    </tr>
+    <tr>
+      <td><strong>运行时</strong></td>
+      <td>宿主程序负责解析和执行</td>
+      <td>MCP Client 和 Server 通过标准协议交互</td>
+    </tr>
+    <tr>
+      <td><strong>可复用性</strong></td>
+      <td>每个应用自己实现工具调用逻辑</td>
+      <td>一个 MCP Server 可被任何 MCP Client 复用</td>
+    </tr>
+    <tr>
+      <td><strong>类比</strong></td>
+      <td>USB 设备的驱动程序</td>
+      <td>USB 接口标准本身</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>为什么“有了 FC 还需要 MCP”</strong>：</p>
+
+<p>FC 的根本问题是<strong>不可复用</strong>——每个 Agent 应用都要自己实现工具的发现、鉴权、调用、错误处理逻辑。A 团队写了一个“查天气”工具，B 团队要用就得重新适配。MCP 把这层标准化了：</p>
+
+<pre><code class="language-mermaid">flowchart LR
+    subgraph before["没有 MCP"]
+        A1["Agent A"] --&gt;|"自定义调用"| T1["天气 API"]
+        A2["Agent B"] --&gt;|"另一套调用"| T1
+        A3["Agent C"] --&gt;|"又一套调用"| T1
+    end
+    
+    subgraph after["有了 MCP"]
+        B1["Agent A"] --&gt;|"MCP 协议"| S1["天气 MCP Server"]
+        B2["Agent B"] --&gt;|"MCP 协议"| S1
+        B3["Agent C"] --&gt;|"MCP 协议"| S1
+    end
+</code></pre>
+
+<p>一个 MCP Server 写一次，所有支持 MCP 的 Agent 都能用——这就是协议标准化的价值。</p>
+
+<p><strong>MCP 的完整架构</strong>：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Host（宿主应用，如 Claude Code）
+  └── MCP Client（协议客户端）
+        ├── 连接 MCP Server A（文件系统）
+        ├── 连接 MCP Server B（数据库）
+        └── 连接 MCP Server C（第三方 API）
+</code></pre></div></div>
+
+<p>MCP Server 通过 <code class="language-plaintext highlighter-rouge">tools/list</code> 声明能力，Client 通过 <code class="language-plaintext highlighter-rouge">tools/call</code> 调用。通信方式支持 stdio（本地进程）和 HTTP+SSE（远程服务）。</p>
+
+<p><strong>差距在哪</strong>：新手把 MCP 等同于 FC 的升级版。高手理解两者是不同层面的东西——FC 是模型能力，MCP 是连接协议。面试官考的是你对 Agent 工具链架构的分层理解，以及对“标准化为什么重要”的工程认知。</p>
+
+<hr />
+
+<h3 id="qmcp-和-a2a-分别解决什么层面的问题为什么需要两个协议">Q：MCP 和 A2A 分别解决什么层面的问题？为什么需要两个协议？</h3>
+
+<blockquote>
+  <p>来源：Agent 30 题 【蚂蚁一面追问：“MCP 和 A2A 什么关系”】【币安AI大模型实习一面追问：“Multi-Agent如何通信”】</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“MCP 是调工具的，A2A 是 Agent 之间通信的。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>这个回答对了但不够深——关键是理解<strong>为什么不能用一个协议解决两个问题</strong>。</p>
+
+<p><strong>层次不同</strong>：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>维度</th>
+      <th>MCP</th>
+      <th>A2A</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>连接对象</strong></td>
+      <td>Agent ↔ 工具（Tool）</td>
+      <td>Agent ↔ Agent</td>
+    </tr>
+    <tr>
+      <td><strong>交互模式</strong></td>
+      <td>请求-响应（调用工具，拿到结果）</td>
+      <td>任务委托（发起任务，等待完成）</td>
+    </tr>
+    <tr>
+      <td><strong>状态管理</strong></td>
+      <td>无状态（每次调用独立）</td>
+      <td>有状态（任务有生命周期：创建→执行→完成）</td>
+    </tr>
+    <tr>
+      <td><strong>发现机制</strong></td>
+      <td>Server 声明 tools</td>
+      <td>Agent 声明 skills（能做什么任务）</td>
+    </tr>
+    <tr>
+      <td><strong>类比</strong></td>
+      <td>员工使用办公软件</td>
+      <td>部门之间的协作流程</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>为什么不能合并成一个协议</strong>：</p>
+
+<p>工具调用和 Agent 协作的<strong>语义不同</strong>：</p>
+<ul>
+  <li>调用工具是<strong>同步的、确定的</strong>——“查天气”，马上返回结果，不需要“协商”</li>
+  <li>Agent 协作是<strong>异步的、不确定的</strong>——“帮我做市场调研”，可能需要几分钟，中间可能需要追问，结果不确定</li>
+</ul>
+
+<p>把两者合并会导致协议过于复杂。MCP 保持简单（请求-响应），A2A 处理复杂性（任务生命周期、能力协商、进度报告）。</p>
+
+<p><strong>在系统中的位置</strong>：</p>
+
+<pre><code class="language-mermaid">flowchart TB
+    U["用户"] --&gt; MA["主 Agent"]
+    MA --&gt;|"A2A 协议"| SA1["子 Agent A\n（数据分析）"]
+    MA --&gt;|"A2A 协议"| SA2["子 Agent B\n（报告撰写）"]
+    SA1 --&gt;|"MCP 协议"| T1["数据库 Server"]
+    SA1 --&gt;|"MCP 协议"| T2["Python 执行 Server"]
+    SA2 --&gt;|"MCP 协议"| T3["文档 Server"]
+</code></pre>
+
+<p>MCP 在底层（Agent 到工具），A2A 在上层（Agent 到 Agent）。两者组合形成完整的 Agent 生态连接标准。</p>
+
+<p><strong>当前状态的判断</strong>：MCP 已经相对成熟，主流 Agent 框架（Claude Code、Cursor 等）都已支持。A2A 还在早期阶段，实际落地的案例少，协议本身还在快速迭代。如果现在要做技术选型，MCP 可以直接用，A2A 建议保持关注但不急于深度投入。</p>
+
+<p><strong>差距在哪</strong>：新手只说了“一个调工具一个通信”——这是表面区别。高手理解两者的语义差异（同步确定 vs 异步不确定）和架构位置（底层 vs 上层），且对当前成熟度有自己的判断。面试官考的是你对 Agent 生态协议层次的理解深度。</p>
+
+<hr />
+
+<h2 id="skills-机制">Skills 机制</h2>
+
+<h3 id="qskills-是什么为什么有了-mcp-和-function-calling还需要-skills">Q：Skills 是什么？为什么有了 MCP 和 Function Calling，还需要 Skills？</h3>
+
+<blockquote>
+  <p>来源：字节实习一面 【蚂蚁一面同题：“Skills 的原理有没有了解过？”】【小红书AI应用开发同题：“Skills了解+如何管理”】【CVTE AI应用工程师一面追问：“怎么理解 Skill？能解决什么问题？”】【科大讯飞一面追问：“写Skills和写提示词的区别与共同点”】</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“Skills 就是预写好的 Prompt 模板吧，调用时注入进去。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>Skills、MCP、Function Calling 解决的是 Agent 能力扩展的<strong>三个不同层面</strong>——把它们混为一谈是常见误区：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>维度</th>
+      <th>Function Calling</th>
+      <th>MCP</th>
+      <th>Skills</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>本质</strong></td>
+      <td>模型输出结构化工具调用</td>
+      <td>工具的标准连接协议</td>
+      <td>可复用的知识+指令单元</td>
+    </tr>
+    <tr>
+      <td><strong>扩展的是什么</strong></td>
+      <td>模型“能调用什么”</td>
+      <td>工具“怎么被发现和连接”</td>
+      <td>Agent“怎么做某类任务”</td>
+    </tr>
+    <tr>
+      <td><strong>执行者</strong></td>
+      <td>宿主程序解析后调用外部代码</td>
+      <td>MCP Server 执行</td>
+      <td><strong>模型自己</strong>按 Skill 内容行动</td>
+    </tr>
+    <tr>
+      <td><strong>内容</strong></td>
+      <td>工具名 + 参数 Schema</td>
+      <td>服务端点 + 通信协议</td>
+      <td>Markdown：步骤、约束、知识、示例</td>
+    </tr>
+    <tr>
+      <td><strong>类比</strong></td>
+      <td>员工会用哪些软件</td>
+      <td>软件怎么安装和连网</td>
+      <td>员工的岗位手册</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>为什么有了 FC/MCP 还需要 Skills</strong>：</p>
+
+<p>FC 和 MCP 解决“Agent 能调用什么工具”，但不解决<strong>“Agent 该怎么组合使用这些工具完成一个复杂任务”</strong>。举例：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>有 MCP/FC：Agent 能查数据库、能读文件、能跑代码
+缺 Skills：Agent 不知道"做代码审查"该先查 git diff → 再读相关文件 → 
+          再按规范检查 → 最后输出结构化报告
+
+有 Skills：注入"代码审查"Skill 后，Agent 知道完整的任务流程、
+          输出格式、检查规范、常见陷阱
+</code></pre></div></div>
+
+<p><strong>Skills 的核心价值是“经验封装”</strong>——把团队的最佳实践、任务流程、约束规则打包成一个可复用单元，让 Agent 不用每次从零摸索。</p>
+
+<p><strong>Skills 和 Prompt 的关键区别</strong>：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>维度</th>
+      <th>普通 Prompt</th>
+      <th>Skills</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>生命周期</td>
+      <td>写在代码里，改了要发版</td>
+      <td>独立文件，热更新</td>
+    </tr>
+    <tr>
+      <td>触发方式</td>
+      <td>每次对话都注入</td>
+      <td>按需触发，匹配时才加载</td>
+    </tr>
+    <tr>
+      <td>粒度</td>
+      <td>全局性的角色和规则</td>
+      <td>针对特定任务类型</td>
+    </tr>
+    <tr>
+      <td>上下文成本</td>
+      <td>始终占用 token</td>
+      <td>不触发时零成本</td>
+    </tr>
+    <tr>
+      <td>可管理性</td>
+      <td>散落在代码各处</td>
+      <td>独立文件，可版本管理</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>一句话总结</strong>：Function Calling 给 Agent 装了工具箱，MCP 让工具箱标准化可插拔，Skills 给 Agent 配了岗位操作手册。三者分别解决“能做什么”“怎么连接”“怎么做好”。</p>
+
+<p><strong>差距在哪</strong>：新手把 Skills 等同于 Prompt 模板。高手理解 Skills 是能力扩展的第三层——不是“调什么工具”的问题，而是“怎么组合工具完成复杂任务”的问题。面试官考的是你对 Agent 能力体系分层的理解。</p>
+
+<hr />
+
+<h3 id="qskillmcprule-三者在-agent-系统中各自扮演什么角色">Q：Skill、MCP、Rule 三者在 Agent 系统中各自扮演什么角色？</h3>
+
+<blockquote>
+  <p>来源：蚂蚁一面 【快手AI应用开发一面追问：“Tool/Skill/Agent 三层抽象的本质区别”】</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“都是给 Agent 加能力的，只是形式不同。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>三者不是“加能力的不同形式”，而是 Agent 行为管控的<strong>三个正交维度</strong>：</p>
+
+<pre><code class="language-mermaid">flowchart TB
+    subgraph system["Agent 行为管控体系"]
+        R["Rules\n（不能做什么）"]
+        S["Skills\n（怎么做某事）"]
+        M["MCP/Tools\n（能调用什么）"]
+    end
+    
+    R --&gt;|"约束边界"| A["Agent 行为空间"]
+    S --&gt;|"提供方法"| A
+    M --&gt;|"提供能力"| A
+</code></pre>
+
+<table>
+  <thead>
+    <tr>
+      <th>维度</th>
+      <th>Rule</th>
+      <th>Skill</th>
+      <th>MCP/Tool</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>职责</strong></td>
+      <td>定义边界——什么不能做</td>
+      <td>提供方法——怎么做好</td>
+      <td>提供能力——能做什么</td>
+    </tr>
+    <tr>
+      <td><strong>性质</strong></td>
+      <td>约束性（硬限制）</td>
+      <td>指导性（最佳实践）</td>
+      <td>能力性（工具集）</td>
+    </tr>
+    <tr>
+      <td><strong>加载时机</strong></td>
+      <td>始终生效</td>
+      <td>按需触发</td>
+      <td>注册后可用</td>
+    </tr>
+    <tr>
+      <td><strong>违反后果</strong></td>
+      <td>拦截/报警/终止</td>
+      <td>效果变差但不会崩</td>
+      <td>调用失败</td>
+    </tr>
+    <tr>
+      <td><strong>谁定义</strong></td>
+      <td>安全团队/运维</td>
+      <td>业务专家/高级工程师</td>
+      <td>工具开发者</td>
+    </tr>
+    <tr>
+      <td><strong>类比</strong></td>
+      <td>公司规章制度</td>
+      <td>岗位操作手册</td>
+      <td>办公设备和软件</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>为什么需要三个维度</strong>：</p>
+
+<p>只有 Tools 没有 Rules → Agent 有能力但无边界，可能删除生产数据
+只有 Rules 没有 Skills → Agent 知道边界但不知道最佳实践，做事低效
+只有 Skills 没有 Tools → Agent 知道怎么做但没有执行手段</p>
+
+<p>三者组合才构成完整的 Agent 行为管控体系：Rules 画红线，Skills 铺方法，Tools 提供手段。</p>
+
+<p><strong>差距在哪</strong>：新手觉得三者“差不多”。高手理解它们是正交的三个维度——约束、方法、能力——缺任何一个 Agent 系统都有缺陷。面试官考的是你对 Agent 系统设计的分层思维。</p>
+
+<hr />
+
+<h2 id="qagent-和-siri-这种传统助手的核心差别在哪">Q：Agent 和 Siri 这种传统助手的核心差别在哪？</h2>
+
+<blockquote>
+  <p>来源：字节AI产品（智能体方向）</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“Agent 更智能，Siri 比较笨。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>核心差别不在“智能程度”，而在架构范式：</p>
+
+<ol>
+  <li><strong>决策模式</strong>：Siri 是“意图识别→槽位填充→调用固定 API”的管道式架构，每个能力是工程师预定义的；Agent 是“理解目标→自主规划→动态选择工具→反思调整”的闭环架构，能力边界由模型能力决定</li>
+  <li><strong>任务复杂度</strong>：Siri 处理单轮单意图（“设个闹钟”），Agent 能处理多步骤复合任务（“帮我规划周末行程并预订”）</li>
+  <li><strong>容错方式</strong>：Siri 失败了说“我不太明白”，Agent 失败了会自主尝试其他路径（Reflection + Retry）</li>
+  <li><strong>上下文利用</strong>：Siri 基本无记忆（每次对话独立），Agent 有长短期记忆，能利用历史交互持续优化</li>
+  <li><strong>工具扩展性</strong>：Siri 的技能由苹果开发团队预定义，Agent 可以通过 MCP/Function Calling 动态接入任意新工具</li>
+  <li><strong>不确定性处理</strong>：Siri 要求精确匹配意图才能执行，Agent 能处理模糊需求并主动澄清</li>
+</ol>
+
+<p><strong>差距在哪</strong>：面试官考的是你对“Agent 本质是自主决策系统”的理解——传统助手是确定性流水线，Agent 是非确定性闭环。</p>
+
+<hr />
+
+<h2 id="qhermesopencodeclaude-codeopenclaw-等热门-coding-agent-工具的核心差异和适用场景">Q：Hermes、OpenCode、Claude Code、OpenClaw 等热门 Coding Agent 工具的核心差异和适用场景？</h2>
+
+<blockquote>
+  <p>来源：哆咔互娱 Agent开发实习一面【唯品会大模型算法实习追问：主流 Agent 框架在 Harness 上有什么差异】</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“Claude Code 最强，其他的也差不多，都是用大模型写代码的工具。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>这几个工具虽然都属于 Coding Agent，但设计哲学和定位差异很大：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>工具</th>
+      <th>核心定位</th>
+      <th>架构特点</th>
+      <th>适用场景</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Claude Code</strong></td>
+      <td>闭源商业级 CLI Agent</td>
+      <td>单 Agent + Harness 工程（Skills/Hooks/CLAUDE.md）；内置权限沙箱和上下文管理</td>
+      <td>企业级代码生成、长任务编排、安全要求高的场景</td>
+    </tr>
+    <tr>
+      <td><strong>Hermes</strong></td>
+      <td>开源 Agent Runtime</td>
+      <td>分层压缩记忆 + 多模型切换；强调可观测性和 session 持久化</td>
+      <td>需要自托管、定制记忆策略的团队</td>
+    </tr>
+    <tr>
+      <td><strong>OpenCode</strong></td>
+      <td>轻量开源终端 Agent</td>
+      <td>Go 实现，启动快，插件少，专注 code completion + 简单 ReAct</td>
+      <td>个人开发者、资源受限环境、不需要复杂编排</td>
+    </tr>
+    <tr>
+      <td><strong>OpenClaw</strong></td>
+      <td>开源 Agent 框架/Runtime</td>
+      <td>模块化设计，工具生态开放，支持 MCP 协议原生接入</td>
+      <td>研究性项目、需要深度定制 Agent 行为的场景</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>从工程角度看几个关键差异维度：</p>
+
+<ol>
+  <li><strong>上下文管理</strong>：Claude Code 用 Harness + 渐进式披露 + compaction；Hermes 用分层压缩 + 外挂记忆；OpenCode 相对简单靠窗口截断</li>
+  <li><strong>工具协议</strong>：Claude Code 原生支持 MCP + Skills 分层；OpenClaw 以 MCP 为核心协议；Hermes 和 OpenCode 各有自己的工具注册方式</li>
+  <li><strong>可控性</strong>：Claude Code 的 Hooks 机制允许在工具调用前后插入自定义逻辑，企业级场景必需；开源方案需自行实现类似能力</li>
+  <li><strong>成本与隐私</strong>：闭源方案调用付费 API，数据过云端；开源方案可本地部署 + 接本地模型，但能力上限受限于底层模型</li>
+</ol>
+
+<p>选型建议：如果是企业内部需要可控、可审计、安全性要求高 → Claude Code；如果需要深度定制 Runtime 行为 → Hermes/OpenClaw；如果只想快速上手轻量使用 → OpenCode。</p>
+
+<p><strong>差距在哪</strong>：面试官考的不是你“用过几个工具”，而是你能否从架构层面理解不同 Agent 工具的设计取舍——上下文管理策略、工具协议选型、可控性与开放性的平衡。能说出具体差异而非只报名字，说明你对 Agent 工程有深度认知。</p>
+
+<hr />
+
+<h2 id="qdifycoze-这种低代码工作流平台和-codexclaude-code-这类-coding-agent-的本质区别是什么">Q：Dify/Coze 这种低代码工作流平台和 Codex/Claude Code 这类 Coding Agent 的本质区别是什么？</h2>
+
+<blockquote>
+  <p>来源：成都某中厂 Agent 产品开发实习面经</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“一个是拖拽的，一个是命令行的，都是做 AI 应用的工具。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>两者虽然都叫“Agent 工具”，但设计哲学和能力边界有根本性差异——它们解决的是 Agent 应用开发中<strong>完全不同层次的问题</strong>。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>维度</th>
+      <th>Dify/Coze（低代码工作流平台）</th>
+      <th>Codex/Claude Code（Coding Agent）</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>核心抽象</strong></td>
+      <td>节点+连线的可视化工作流</td>
+      <td>自然语言指令→自主多步执行</td>
+    </tr>
+    <tr>
+      <td><strong>决策模式</strong></td>
+      <td>人类设计时穷举所有分支路径</td>
+      <td>Agent 运行时自主决策执行路径</td>
+    </tr>
+    <tr>
+      <td><strong>灵活性上限</strong></td>
+      <td>只能走预定义的节点连线</td>
+      <td>能处理任何设计时未预见的情况</td>
+    </tr>
+    <tr>
+      <td><strong>目标用户</strong></td>
+      <td>产品经理/运营（非编程背景）</td>
+      <td>开发者（技术背景）</td>
+    </tr>
+    <tr>
+      <td><strong>输出产物</strong></td>
+      <td>一个可运行的 AI 工作流应用</td>
+      <td>代码变更（新功能/bug 修复/重构）</td>
+    </tr>
+    <tr>
+      <td><strong>确定性</strong></td>
+      <td>高——同样输入走同样路径</td>
+      <td>低——同样需求可能走不同实现路径</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>本质区别一：编排者 vs 执行者</strong></p>
+
+<p>Dify/Coze 是<strong>编排工具</strong>——帮你把 LLM 调用、知识库检索、条件判断、API 调用等节点“编排”成一条固定管线。它本身不是 Agent，而是用来<strong>构建简单 Agent 应用的 IDE</strong>。编排的上限取决于设计者能否穷举所有分支。</p>
+
+<p>Codex/Claude Code 本身<strong>就是 Agent</strong>——它接收一个目标后自主决定做什么、读什么文件、调什么工具、怎么验证。它不需要预定义路径，每次执行都是动态决策。</p>
+
+<p><strong>本质区别二：确定性流程 vs 非确定性探索</strong></p>
+
+<pre><code class="language-mermaid">flowchart LR
+    subgraph dify["Dify/Coze 模式"]
+        direction LR
+        D1["输入"] --&gt; D2["节点A：\n意图分类"]
+        D2 --&gt;|"类型1"| D3["节点B：\n查知识库"]
+        D2 --&gt;|"类型2"| D4["节点C：\n调API"]
+        D3 --&gt; D5["节点D：\n生成回复"]
+        D4 --&gt; D5
+    end
+
+    subgraph coding["Coding Agent 模式"]
+        direction TB
+        C1["目标：实现X功能"] --&gt; C2["自主探索代码库"]
+        C2 --&gt; C3["自主决定修改方案"]
+        C3 --&gt; C4["自主实现+验证"]
+        C4 --&gt;|"验证失败"| C3
+        C4 --&gt;|"验证通过"| C5["完成"]
+    end
+</code></pre>
+
+<p>Dify/Coze 的每条路径在设计时就确定了——用户输入只是“选择走哪条预设路径”。Coding Agent 的路径在运行时才产生——面对从未见过的代码库也能自主探索和实现。</p>
+
+<p><strong>本质区别三：能力天花板</strong></p>
+
+<p>低代码平台的天花板是<strong>设计者的想象力</strong>——它只能做设计者预见到的事。如果需求变了、场景复杂了，就要重新拖拽连线。适合标准化、重复性高的任务（客服问答、表单处理、简单 RAG 应用）。</p>
+
+<p>Coding Agent 的天花板是<strong>底层模型的能力</strong>——理论上只要模型能理解，就能做。适合开放性、创造性、需要探索和试错的任务（代码开发、复杂分析、研究性工作）。</p>
+
+<p><strong>两者的互补关系</strong>：</p>
+
+<p>实际生产中两者经常组合使用：用 Dify/Coze 搭建用户可见的 AI 应用（确定性高、用户体验可控），用 Coding Agent 开发和维护这个应用本身的代码（灵活性高、效率高）。</p>
+
+<p><strong>差距在哪</strong>：新手只看到了交互形式的差异（拖拽 vs 命令行）。高手理解两者的本质区别在于决策模式（预定义路径 vs 运行时自主决策）和能力上限（设计者想象力 vs 模型能力）。面试官考的是你对 Agent 产品形态的分类认知——不是所有带 AI 的产品都是 Agent，关键区别在于“谁在做决策”。</p>
+
+<hr />
+
+<h2 id="qlangchain-的传统-chain-和-lcel-有什么区别lcel-解决了哪些工程问题">Q：LangChain 的传统 Chain 和 LCEL 有什么区别？LCEL 解决了哪些工程问题？</h2>
+
+<blockquote>
+  <p>来源：哔哩哔哩 AI 应用岗 Agent 开发一面（2026-08-18）</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“LCEL 用管道符连接组件，写起来更简洁。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>传统 Chain 往往由具体类封装固定调用流程，扩展、并行和流式行为取决于各类实现。LCEL 把 Prompt、模型、解析器、Retriever 和自定义函数统一抽象为 Runnable，通过 <code class="language-plaintext highlighter-rouge">|</code>、并行映射和分支组合声明数据流，并统一提供 <code class="language-plaintext highlighter-rouge">invoke/batch/stream/async</code>、配置传递、重试与 tracing 接口。</p>
+
+<p>它的价值不只是语法短，而是让组合后的链仍保留批处理、流式、异步和观测能力，便于局部替换和测试。LCEL 适合无复杂持久状态的可组合数据流；需要循环、长期状态、人工中断和 checkpoint 时，应使用 LangGraph 等状态图，不要把 LCEL 管道硬拗成工作流引擎。</p>
+
+<p><strong>差距在哪</strong>：新手只看到运算符，高手说清统一 Runnable 协议、组合能力和与状态图的边界。</p>
+
+<hr />
+
+<h2 id="qhooks-在-agent-系统中应该拦截哪些阶段和-prompt-约束有什么区别">Q：Hooks 在 Agent 系统中应该拦截哪些阶段，和 Prompt 约束有什么区别？</h2>
+
+<blockquote>
+  <p>来源：B站 Agent 二面（2026-08-19）</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“在工具调用前后运行 Hook，做日志和安全检查。”</p>
+
+<p><strong>高手答</strong>：Hooks 可位于请求进入、上下文组装、模型调用、工具前后、状态提交和最终输出，但每个 Hook 必须有明确输入、超时、失败策略和副作用。权限、路径、参数和发布门禁由确定性 Hook 强制执行；Prompt 只提供行为指导。Hook 版本进入 trace，禁止任意插件获取全量秘密；高风险阻断需可解释、可审批和可回滚。</p>
+
+<p><strong>差距在哪</strong>：新手把 Hook 当回调，高手把它当模型之外的策略执行点。</p>
+
+<hr />
+
+<h2 id="这类题的答题模式">这类题的答题模式</h2>
+
+<p>概念考察题的核心是<strong>独立思考 + 结构化表达</strong>：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>1. 先给定义：一句话说清概念的本质（不要复述定义，要用自己的理解）
+2. 再讲演进：为什么出现这个概念？解决了什么之前解不了的问题？
+3. 做对比：和相关概念的关键区别是什么？（用表格最清晰）
+4. 给判断：你怎么看这个概念？适用场景和局限各是什么？
+5. 接项目：你在实际项目里怎么用的？或者为什么没用？
+</code></pre></div></div>
+
+<p>面试官问“你了解X吗”不是在考记忆力——“了解”只是入门，<strong>有判断</strong>才是高手。</p>
+
+<hr />
+
+<h2 id="附概念考察高频考点速查">附：概念考察高频考点速查</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>概念</th>
+      <th>一句话本质</th>
+      <th>高频追问</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Harness Engineering</td>
+      <td>用外部工程体系约束和增强 Agent</td>
+      <td>“怎么构建？”“项目里怎么体现？”</td>
+    </tr>
+    <tr>
+      <td>Context Engineering</td>
+      <td>精准控制上下文窗口内的信息编排</td>
+      <td>“和 Prompt Engineering 区别？”</td>
+    </tr>
+    <tr>
+      <td>Vibe Coding</td>
+      <td>凭感觉用 AI 写代码，快速验证</td>
+      <td>“和 Harness 怎么选？”</td>
+    </tr>
+    <tr>
+      <td>Skills</td>
+      <td>可复用的知识+指令单元，Agent 的岗位手册</td>
+      <td>“和 MCP/Prompt 区别？””为什么需要？”</td>
+    </tr>
+    <tr>
+      <td>MCP</td>
+      <td>Agent 到工具的标准连接协议</td>
+      <td>“和 Function Calling 区别？”</td>
+    </tr>
+    <tr>
+      <td>A2A</td>
+      <td>Agent 之间的通信协议</td>
+      <td>“和 MCP 什么关系？”</td>
+    </tr>
+    <tr>
+      <td>Agentic RL</td>
+      <td>用强化学习训练 Agent 行为策略</td>
+      <td>“和 GRPO/PPO 的关系？”</td>
+    </tr>
+    <tr>
+      <td>Agent OS</td>
+      <td>Agent 的操作系统层抽象</td>
+      <td>“包含哪些能力？”</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>下一篇建议继续看：</p>
+
+<ul>
+  <li><a href="../01-architecture-design/index.html">架构选型：ReAct、Plan-and-Execute 与 ToT 怎么选</a></li>
+  <li><a href="../08-prompt-engineering/index.html">Prompt 工程与框架原理</a></li>
+</ul>
+
+                <!-- Article Feedback -->
+                <div class="article-feedback" id="article-feedback">
+                    <span class="feedback-label">这篇文章有帮助吗？</span>
+                    <div class="feedback-btns">
+                        <button class="reaction-btn" id="btn-like" type="button" aria-label="点赞">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
+                            <span class="reaction-count" id="like-count">0</span>
+                        </button>
+                        <button class="reaction-btn" id="btn-dislike" type="button" aria-label="点踩">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3H10z"/><path d="M17 2h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3"/></svg>
+                            <span class="reaction-count" id="dislike-count">0</span>
+                        </button>
+                    </div>
+                    <span class="feedback-sep">|</span>
+                    <a class="feedback-comment" id="feedback-comment" href="#" target="_blank" rel="noopener">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                        GitHub 留言
+                    </a>
+                </div>
+                <!-- Prev / Next pager -->
+                <nav class="doc-pager" aria-label="章节导航">
+                    <a class="pager-btn pager-prev" id="pager-prev" href="#">
+                        <span class="pager-label">← 上一篇</span>
+                        <span class="pager-title" id="pager-prev-title"></span>
+                    </a>
+                    <a class="pager-btn pager-next" id="pager-next" href="#">
+                        <span class="pager-label">下一篇 →</span>
+                        <span class="pager-title" id="pager-next-title"></span>
+                    </a>
+                </nav>
+            </article>
+
+            <!-- Right: TOC -->
+            <nav class="doc-toc" id="doc-toc">
+                <p class="toc-label">本页目录</p>
+                <div id="toc-list"></div>
+            </nav>
+        </main>
+
+        <footer class="doc-footer">
+            <div class="doc-footer-inner">
+                <span class="footer-desc">Zero2Agent · static docs architecture · Built for learning Agent development from zero to project.</span>
+                <span id="busuanzi_container_site_uv" class="footer-counter" style="display:none">
+                    👤 你是第 <span id="busuanzi_value_site_uv" class="cv"></span> 位读者
+                </span>
+                <span id="busuanzi_container_page_pv" class="footer-counter" style="display:none">
+                    📖 本文 <span id="busuanzi_value_page_pv" class="cv"></span> 次阅读
+                </span>
+                <div class="footer-links">
+                    <a href="https://onefly.top" target="_blank" rel="noopener" class="footer-link">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
+                            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                        </svg>
+                        Onefly
+                    </a>
+                    <a href="https://github.com/ranxi2001/zero2Agent" target="_blank" rel="noopener" class="footer-link">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.522 2 12 2z"/>
+                        </svg>
+                        GitHub
+                    </a>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Back to top button -->
+    <button class="back-to-top" id="back-to-top" aria-label="回到顶部" title="回到顶部">🚀</button>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script>
+        // Prevent hljs from processing mermaid code blocks
+        document.querySelectorAll('.language-mermaid code, code.language-mermaid').forEach(function(el) {
+            el.classList.add('nohighlight');
+        });
+        hljs.highlightAll();
+    </script>
+    <!-- Transform kramdown mermaid code blocks and render -->
+    <script>
+        (function () {
+            function srcToInnerHTML(src) {
+                return src
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/&lt;br\s*\/?&gt;/gi, '<br/>');
+            }
+
+            document.querySelectorAll('.language-mermaid').forEach(function(wrapper) {
+                var code = wrapper.querySelector('code') || wrapper;
+                var src = code.textContent;
+                var div = document.createElement('div');
+                div.className = 'mermaid';
+                div.dataset.mermaidSrc = src;
+                div.innerHTML = srcToInnerHTML(src);
+                wrapper.parentNode.replaceChild(div, wrapper);
+            });
+
+            var els = document.querySelectorAll('.mermaid');
+            if (els.length > 0) mermaid.init(undefined, els);
+        })();
+    </script>
+    <!-- Flat nav list for prev/next pager -->
+    <script>
+        window.Z2A_BASE = "";
+        window.Z2A_REACTIONS_API = "https://zero2pm-reactions.ranxi169.workers.dev";
+        window.Z2A_NAV = [{"path":"learn-agent-basic/01-what-is-an-agent","title":"什么是 Agent"},{"path":"learn-agent-basic/02-workflow-vs-agent","title":"Workflow 和 Agent 的区别"},{"path":"learn-agent-basic/03-core-components","title":"一个 Agent 系统的核心组成"},{"path":"learn-agent-basic/04-why-agent-demos-break","title":"为什么很多 Agent Demo 一落地就不稳定"},{"path":"learn-agent-basic/05-tool-calling-basics","title":"大模型 API 输入输出与 Tool Calling"},{"path":"learn-agent-basic/06-memory-patterns","title":"Context、State 与 Memory"},{"path":"learn-agent-basic/07-planning-reflection-rag","title":"Planning、Reflection、RAG 分别解决什么问题"},{"path":"learn-agent-basic/08-single-vs-multi-agent","title":"单 Agent 和多 Agent 的边界"},{"path":"learn-agent-basic/09-agent-infra","title":"Agent Infra：从 Harness 到生产环境"},{"path":"learn-agent-basic/10-loop-engineering","title":"Loop Engineering：让 Agent 自主迭代直到正确"},{"path":"learn-agent-basic/11-agent-evaluation","title":"Agent 评估：怎么知道你的 Agent 好不好"},{"path":"learn-agent-basic/12-coding-agent-patterns","title":"Coding Agent：最成功的 Agent 落地形态"},{"path":"learn-agent-basic/13-context-engineering","title":"Context Engineering：系统化设计模型输入"},{"path":"learn-agent-basic/14-multimodal-realtime","title":"多模态与实时交互 Agent"},{"path":"learn-agent-basic/15-agent-self-evolution","title":"Agent 自进化：不改权重也能持续变强"},{"path":"learn-agent-basic/16-advanced-rag-memory","title":"高级 RAG 与记忆架构"},{"path":"learn-agent-basic/17-async-event-driven","title":"异步 Agent 与事件驱动架构"},{"path":"learn-langgraph/01-what-is-langgraph","title":"LangGraph 是什么，为什么不用链式调用"},{"path":"learn-langgraph/02-state-node-graph","title":"State、Node、Graph 三件套"},{"path":"learn-langgraph/03-sequential-graph","title":"顺序图：第一个可运行的 Workflow"},{"path":"learn-langgraph/04-conditional-edges","title":"条件分支：add_conditional_edges"},{"path":"learn-langgraph/05-parallel-workflows","title":"并行执行：Fan-out / Fan-in"},{"path":"learn-langgraph/06-prompt-chaining","title":"Prompt Chaining：分步生成"},{"path":"learn-langgraph/07-llm-integration","title":"接入 LLM：OpenAI 与 HuggingFace"},{"path":"learn-sdk-frameworks/01-openai-agents-sdk","title":"OpenAI Agents SDK：Agent、Tool、Handoff"},{"path":"learn-sdk-frameworks/02-google-gemini-sdk","title":"Google genai SDK：Gemini + Vertex AI 多模型"},{"path":"learn-sdk-frameworks/03-claude-anthropic-sdk","title":"Claude Anthropic SDK：Messages API 与 Tool Use"},{"path":"learn-sdk-frameworks/04-sdk-comparison","title":"三大 SDK 横向对比：怎么选"},{"path":"learn-agent-survey/01-agentscope","title":"AgentScope：阿里的多 Agent 框架"},{"path":"learn-agent-survey/02-mastra","title":"Mastra：TypeScript 原生 Agent 框架"},{"path":"learn-agent-survey/03-semantic-kernel","title":"Semantic Kernel：微软的企业级 AI SDK"},{"path":"learn-agent-survey/04-eino","title":"Eino：字节跳动的 Go 语言 Agent 框架"},{"path":"learn-agent-survey/05-gitagent","title":"GitAgent：代码仓库智能操作"},{"path":"learn-agent-survey/06-harness","title":"手搓 Agent：从原理到实现"},{"path":"learn-agent-survey/07-agentuniverse","title":"AgentUniverse：华为的企业级 Agent 平台"},{"path":"learn-agent-survey/08-deerflow","title":"DeerFlow：字节跳动的 Deep Research 框架"},{"path":"learn-agent-survey/09-langchain","title":"LangChain：最流行的 LLM 框架"},{"path":"learn-agent-survey/10-google-adk","title":"Google ADK：官方 Agent 开发套件"},{"path":"learn-agent-survey/11-skills-claudecode","title":"Skills + Claude Code：模块化技能系统"},{"path":"learn-agent-survey/12-vercel-ai-sdk","title":"Vercel AI SDK：全栈 AI 应用框架"},{"path":"learn-agent-survey/13-autogen","title":"AutoGen：微软的多 Agent 对话框架"},{"path":"learn-openclaw/01-core-idea","title":"为什么要自己写 Agent"},{"path":"learn-openclaw/02-node-to-agent","title":"Agent Loop：EventStream 核心循环"},{"path":"learn-openclaw/03-rag","title":"RAG：检索增强工程实现"},{"path":"learn-openclaw/04-tools","title":"工具系统：MCP 与并行执行"},{"path":"learn-openclaw/05-memory","title":"Context Engine：记忆架构"},{"path":"learn-openclaw/06-multi-agent","title":"Multi-Agent：隔离与路由"},{"path":"learn-openclaw/07-pi-mono","title":"读懂 pi-mono 源码"},{"path":"learn-openclaw/08-build-openclaw","title":"构建你的 OpenClaw"},{"path":"learn-openclaw/09-interview","title":"面试与实习准备"},{"path":"learn-claude-code/01-agent-loop","title":"Agent Loop：一个循环就是一个 Agent"},{"path":"learn-claude-code/02-tool-use","title":"Tool Use：扩展模型能触达的边界"},{"path":"learn-claude-code/03-todo-write","title":"TodoWrite：让 Agent 不再迷路"},{"path":"learn-claude-code/04-subagent","title":"Subagent：上下文隔离的正确姿势"},{"path":"learn-claude-code/05-skill-loading","title":"Skill Loading：按需加载领域知识"},{"path":"learn-claude-code/06-context-compact","title":"Context Compact：三层压缩换无限会话"},{"path":"learn-claude-code/07-task-system","title":"Task System：持久化任务图"},{"path":"learn-claude-code/08-background-tasks","title":"Background Tasks：非阻塞工具执行"},{"path":"learn-claude-code/09-agent-teams","title":"Agent Teams：多 Agent 协作"},{"path":"learn-claude-code/10-team-protocols","title":"Team Protocols：结构化通信协议"},{"path":"learn-claude-code/11-autonomous-agents","title":"Autonomous Agents：自组织团队"},{"path":"learn-claude-code/12-worktree-isolation","title":"Worktree 隔离：多 Agent 并行不踩踏"},{"path":"learn-deepseek-harness/01-what-is-harness","title":"DeepSeek Harness：一切皆插件的 Agent 运行时"},{"path":"learn-deepseek-harness/02-cordis-plugin-kernel","title":"声明式与命令式：Cordis 的五个核心概念"},{"path":"learn-deepseek-harness/03-profile-bundle-patch","title":"运行中的 DSH：插件树、组合层与能力接缝"},{"path":"learn-deepseek-harness/04-llm-seam","title":"LLM 接缝：把模型差异关在适配器里"},{"path":"learn-deepseek-harness/05-agent-loop","title":"Agent Loop：控制平面如何推进任务"},{"path":"learn-deepseek-harness/06-tool-pipeline","title":"Tool Pipeline：能力为什么不能直接等于权限"},{"path":"learn-deepseek-harness/07-session-log","title":"Session Log：为什么日志就是事实源"},{"path":"learn-deepseek-harness/08-inbox-control","title":"Inbox 控制：为什么用户插话必须有自己的语义"},{"path":"learn-deepseek-harness/09-code-mode","title":"Code Mode：上下文压缩不等于安全隔离"},{"path":"learn-deepseek-harness/10-context-compaction-cost","title":"Context Compaction：把上下文当作工作集管理"},{"path":"learn-deepseek-harness/11-security-boundary","title":"安全边界：把信任放到模型之外"},{"path":"learn-deepseek-harness/12-subagent-orchestration","title":"Subagent 编排：扩展能力而不是复制 Loop"},{"path":"learn-deepseek-harness/13-runtime-surfaces","title":"Runtime Surfaces：一套运行时如何服务多个宿主"},{"path":"learn-agent-training/01-agent-sft","title":"Agent SFT 关键细节：从轨迹数据到 Loss Mask"},{"path":"learn-agent-training/02-agent-rl","title":"Agent RL 实战：用强化学习提升推理与决策质量"},{"path":"learn-agent-training/03-grpo-vs-ppo","title":"GRPO vs PPO：Agent 强化学习算法深度对比与选型"},{"path":"learn-agent-training/04-data-mix","title":"训练数据配比实战：Agent 不只吃轨迹数据"},{"path":"learn-agent-training/05-agent-eval","title":"Agent 评测：怎么衡量训练效果"},{"path":"learn-agent-training/06-train-to-deploy","title":"从 SFT 到部署：Agent 模型上线全流程"},{"path":"learn-agent-training/07-training-environment-engineering","title":"Agent 训练环境工程：从仿真沙箱到数据回流闭环"},{"path":"learn-agent-practice/01-vibe-coding-homepage","title":"从 0 开始 Vibe Coding：用 Codex 发布个人主页"},{"path":"learn-agent-practice/02-ai-coding-interview","title":"AI Coding 面试：解题流程与交付策略"},{"path":"learn-agent-practice/03-daily-dev-workflow","title":"日常开发中的 Agent 工作流"},{"path":"learn-agent-practice/04-auto-harness","title":"Auto Harness 迭代实战"},{"path":"learn-agent-practice/05-eval-driven-practice","title":"Eval-Driven Agent Practice：用评估驱动 Agent 工作流迭代"},{"path":"learn-pi/01-what-is-pi","title":"Pi 是什么：定位、架构与 Agent Loop"},{"path":"learn-pi/02-pi-ai-provider","title":"pi-ai：统一多 Provider 的适配层设计"},{"path":"learn-pi/03-extension-system","title":"扩展体系：Skill、Extension 与 Package"},{"path":"learn-pi/04-mcp-adapter","title":"Pi 为什么不内置 MCP：Adapter 与 Token 取舍"},{"path":"learn-pi/05-security-model","title":"安全模型：Project Trust、权限门禁与系统隔离"},{"path":"learn-pi/06-ecosystem","title":"生态使用：发现、审计与退出策略"},{"path":"learn-pi/07-comparison","title":"Pi vs Claude Code vs DSH：按约束选择 Harness"},{"path":"learn-pi/08-session-runtime","title":"Session Runtime：树形历史、恢复与 Compaction"},{"path":"learn-codex/01-what-is-codex","title":"Codex CLI 是什么：定位、架构与 Agent Loop"},{"path":"learn-codex/02-config-permission","title":"配置与权限系统：TOML 层级与三种审批策略"},{"path":"learn-codex/03-sandbox-security","title":"沙箱与安全模型：平台原生隔离的工程边界"},{"path":"learn-codex/04-mcp-integration","title":"MCP 深度集成：工具协议与审批边界"},{"path":"learn-codex/05-codex-sdk","title":"Codex SDK：Thread-based 编程式 Agent 接口"},{"path":"learn-codex/06-developer-experience","title":"开发者体验与生态评估"},{"path":"learn-codex/07-codex-vs-claude-code","title":"Codex vs Claude Code vs DSH"},{"path":"learn-agent-interview/01-architecture-design","title":"架构选型"},{"path":"learn-agent-interview/02-tool-management","title":"工具管理"},{"path":"learn-agent-interview/03-fault-tolerance","title":"容错与鲁棒性"},{"path":"learn-agent-interview/04-memory-context","title":"记忆与上下文"},{"path":"learn-agent-interview/05-eval-and-vision","title":"评估与全局观"},{"path":"learn-agent-interview/06-multi-agent-collab","title":"多智能体协作"},{"path":"learn-agent-interview/07-engineering-pitfalls","title":"工程化踩坑"},{"path":"learn-agent-interview/08-prompt-engineering","title":"Prompt 工程与框架原理"},{"path":"learn-agent-interview/09-rag-retrieval","title":"RAG 与检索系统"},{"path":"learn-agent-interview/10-training-and-data","title":"训练、数据与模型优化"},{"path":"learn-agent-interview/11-ai-code-testing","title":"AI 代码分析与测试"},{"path":"learn-agent-interview/12-business-ai-engineering","title":"业务 AI 工程分析"},{"path":"learn-agent-interview/13-project-deep-dive","title":"简历项目拷打"},{"path":"learn-agent-interview/14-company-preferences","title":"各公司面试偏好"},{"path":"learn-agent-interview/15-agent-concepts","title":"概念考察"},{"path":"final-project/01-prd","title":"PRD：产品需求文档"},{"path":"final-project/02-architecture","title":"系统架构设计"},{"path":"final-project/03-query-engine","title":"Query Engine 实现"},{"path":"final-project/04-tools-skills","title":"Tools & Skills 实现"},{"path":"final-project/05-knowledge-base","title":"知识库构建"},{"path":"final-project/06-context-memory","title":"Context & Memory"},{"path":"final-project/07-permission-session","title":"Permission & Session"},{"path":"final-project/08-hook-command","title":"Hook & Command"},{"path":"final-project/09-sub-agent","title":"Sub-agent 编排"},{"path":"final-project/10-stt-speech","title":"STT 集成与语音分析"},{"path":"final-project/11-deploy-demo","title":"部署与演示"},{"path":"final-project/12-web-ui","title":"Web UI 交互设计"},];
+    </script>
+    <script src="/assets/js/app.js?v=11"></script>
+    <script src="/assets/js/github-stars.js?v=1"></script>
+</body>
+
+</html>

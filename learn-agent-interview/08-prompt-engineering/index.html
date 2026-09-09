@@ -1,0 +1,3514 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+        (function(){var s=localStorage.getItem('z2a-theme');var t=s||(window.matchMedia('(prefers-color-scheme:light)').matches?'light':'dark');document.documentElement.setAttribute('data-theme',t);})();
+    </script>
+    <title>Prompt 工程与框架原理：模板构建、Skills 机制 | zero2Agent</title>
+    <meta name="description" content="Prompt 模板分层构建和 Skills 可复用能力单元的实现原理">
+    
+    <link rel="canonical" href="https://onefly.top/learn-agent-interview/08-prompt-engineering/">
+    <!-- Open Graph -->
+    <meta property="og:title" content="Prompt 工程与框架原理：模板构建、Skills 机制">
+    <meta property="og:description" content="Prompt 模板分层构建和 Skills 可复用能力单元的实现原理">
+    <meta property="og:url" content="https://onefly.top/learn-agent-interview/08-prompt-engineering/">
+    <meta property="og:site_name" content="zero2Agent">
+    <meta property="og:type" content="article">
+    <meta property="og:locale" content="zh_CN">
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Prompt 工程与框架原理：模板构建、Skills 机制">
+    <meta name="twitter:description" content="Prompt 模板分层构建和 Skills 可复用能力单元的实现原理">
+    <!-- JSON-LD structured data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Article",
+      "headline": "Prompt 工程与框架原理：模板构建、Skills 机制",
+      "description": "Prompt 模板分层构建和 Skills 可复用能力单元的实现原理",
+      "url": "https://onefly.top/learn-agent-interview/08-prompt-engineering/",
+      "publisher": {
+        "@type": "Organization",
+        "name": "zero2Agent"
+      },
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://onefly.top/learn-agent-interview/08-prompt-engineering/"
+      }
+    }
+    </script>
+    <script>
+        /* file: protocol only — for local _site preview */
+        (function () {
+            if (window.location.protocol !== "file:") return;
+            var path = window.location.pathname.replace(/\\/g, "/");
+            var marker = "/_site/";
+            var idx = path.lastIndexOf(marker);
+            if (idx < 0) return;
+            var relDir = path.slice(idx + marker.length).replace(/[^/]*$/, "");
+            var depth = relDir.split("/").filter(Boolean).length;
+            document.write('<base href="' + ("../".repeat(depth) || "./") + '">');
+        })();
+    </script>
+    <link rel="icon" type="image/svg+xml" href="/assets/images/logo.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Noto+Sans+SC:wght@400;500;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/css/docs.css?v=15">
+    <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <link id="hljs-theme" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <script>if(document.documentElement.getAttribute('data-theme')==='light'){document.getElementById('hljs-theme').href='https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css';}</script>
+    <!-- Mermaid: load + configure in <head> so it's ready before body scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@9.4.3/dist/mermaid.min.js"></script>
+    <script>
+        (function(){
+            var isLight = document.documentElement.getAttribute('data-theme') === 'light';
+            var darkVars = {
+                background: '#0a0a10', primaryColor: '#1a2535',
+                primaryTextColor: '#d1d5db', primaryBorderColor: '#334155',
+                lineColor: '#10b981', secondaryColor: '#161e2e',
+                tertiaryColor: '#161e2e', edgeLabelBackground: '#0d0d12',
+                clusterBkg: '#13131f'
+            };
+            var lightVars = {
+                background: '#ffffff', primaryColor: '#dbeafe',
+                primaryTextColor: '#1a1a2e', primaryBorderColor: '#93c5fd',
+                lineColor: '#059669', secondaryColor: '#f0fdf4',
+                tertiaryColor: '#ecfdf5', edgeLabelBackground: '#ffffff',
+                clusterBkg: '#f8fafc'
+            };
+            mermaid.initialize({
+                startOnLoad: false,
+                securityLevel: 'loose',
+                theme: isLight ? 'default' : 'dark',
+                themeVariables: Object.assign(isLight ? lightVars : darkVars, {
+                    fontFamily: '"Noto Sans SC", "Inter", sans-serif',
+                    fontSize: '14px'
+                }),
+                flowchart: { curve: 'basis', htmlLabels: false, padding: 16 },
+                sequence: {
+                    actorFontFamily: '"Noto Sans SC", sans-serif',
+                    messageFontFamily: '"Noto Sans SC", sans-serif',
+                },
+            });
+        })();
+    </script>
+</head>
+
+<body>
+    <div class="site-shell">
+        <header class="doc-header">
+            <div class="doc-header-inner">
+                <a href="/" class="brand">
+                    <img src="/assets/images/logo.svg" alt="Zero2Agent logo" class="brand-logo">
+                    <span class="brand-text">Zero2Agent</span>
+                </a>
+                <nav class="doc-nav">
+                    
+                    <a href="/learn-agent-basic/index.html"
+                       
+                       title="Agent Basic">
+                        Basic
+                    </a>
+                    
+                    <a href="/learn-langgraph/index.html"
+                       
+                       title="LangGraph">
+                        LangGraph
+                    </a>
+                    
+                    <a href="/learn-sdk-frameworks/index.html"
+                       
+                       title="SDK 框架">
+                        SDK
+                    </a>
+                    
+                    <a href="/learn-agent-survey/index.html"
+                       
+                       title="框架调研">
+                        Survey
+                    </a>
+                    
+                    <a href="/learn-openclaw/index.html"
+                       
+                       title="OpenClaw Agent">
+                        OpenClaw
+                    </a>
+                    
+                    <a href="/learn-claude-code/index.html"
+                       
+                       title="Claude Code">
+                        Claude Code
+                    </a>
+                    
+                    <a href="/learn-deepseek-harness/index.html"
+                       
+                       title="DeepSeek Harness">
+                        DSH
+                    </a>
+                    
+                    <a href="/learn-agent-training/index.html"
+                       
+                       title="Agent 训练实战">
+                        训练实战
+                    </a>
+                    
+                    <a href="/learn-agent-practice/index.html"
+                       
+                       title="Agent 应用实战">
+                        应用实战
+                    </a>
+                    
+                    <a href="/learn-pi/index.html"
+                       
+                       title="Pi Coding Agent">
+                        Pi
+                    </a>
+                    
+                    <a href="/learn-codex/index.html"
+                       
+                       title="OpenAI Codex CLI">
+                        Codex
+                    </a>
+                    
+                    <a href="/learn-agent-interview/index.html"
+                       class="is-active"
+                       title="Agent 面试通关">
+                        面试通关
+                    </a>
+                    
+                    <a href="/final-project/index.html"
+                       
+                       title="Final Project">
+                        Project
+                    </a>
+                    
+                    <div class="nav-dropdown">
+                        <button class="nav-dropdown-trigger" type="button">Zero 系列 ▾</button>
+                        <div class="nav-dropdown-menu">
+                            <a href="https://onefly.top/" target="_blank" rel="noopener">zero2Agent <span>AI Agent 工程</span></a>
+                            <a href="https://onefly.top/zero2Leetcode/" target="_blank" rel="noopener">zero2Leetcode <span>算法刷题</span></a>
+                            <a href="https://onefly.top/zero2PM/" target="_blank" rel="noopener">zero2PM <span>产品经理入门</span></a>
+                            <a href="https://onefly.top/zero2DA/" target="_blank" rel="noopener">zero2DA <span>数据分析入门</span></a>
+                        </div>
+                    </div>
+                </nav>
+                <div class="header-actions">
+                    <a class="github-star-btn" href="https://github.com/ranxi2001/zero2Agent" target="_blank" rel="noopener" aria-label="在 GitHub 为 zero2Agent 点 Star">
+                        <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 .7a11.5 11.5 0 0 0-3.64 22.41c.58.11.79-.25.79-.56v-2.22c-3.22.7-3.9-1.37-3.9-1.37-.53-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.71.08-.71 1.16.08 1.78 1.2 1.78 1.2 1.03 1.77 2.71 1.26 3.37.96.1-.75.4-1.26.73-1.55-2.57-.29-5.27-1.29-5.27-5.69 0-1.26.45-2.29 1.19-3.09-.12-.29-.52-1.47.11-3.05 0 0 .97-.31 3.16 1.18a10.94 10.94 0 0 1 5.76 0c2.19-1.49 3.16-1.18 3.16-1.18.63 1.58.23 2.76.11 3.05.74.8 1.19 1.83 1.19 3.09 0 4.41-2.71 5.39-5.29 5.68.42.36.79 1.06.79 2.14v3.16c0 .31.21.68.8.56A11.5 11.5 0 0 0 12 .7Z"/></svg>
+                        <span>Star</span>
+                        <span class="github-star-count" data-github-stars aria-label="GitHub Star 数量">—</span>
+                    </a>
+                    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="切换主题" title="切换主题">
+                        <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                        <svg class="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="doc-main">
+            <!-- Left: hierarchical navigation -->
+            <aside class="doc-sidebar">
+                <p class="sidebar-label">Learning Map</p>
+                
+                <div class="nav-module">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/learn-agent-basic/index.html"
+                           class="nav-module-link">
+                            Agent Basic
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/learn-agent-basic/01-what-is-an-agent/index.html"
+                           class="nav-article">
+                            什么是 Agent
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/02-workflow-vs-agent/index.html"
+                           class="nav-article">
+                            Workflow 和 Agent 的区别
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/03-core-components/index.html"
+                           class="nav-article">
+                            一个 Agent 系统的核心组成
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/04-why-agent-demos-break/index.html"
+                           class="nav-article">
+                            为什么很多 Agent Demo 一落地就不稳定
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/05-tool-calling-basics/index.html"
+                           class="nav-article">
+                            大模型 API 输入输出与 Tool Calling
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/06-memory-patterns/index.html"
+                           class="nav-article">
+                            Context、State 与 Memory
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/07-planning-reflection-rag/index.html"
+                           class="nav-article">
+                            Planning、Reflection、RAG 分别解决什么问题
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/08-single-vs-multi-agent/index.html"
+                           class="nav-article">
+                            单 Agent 和多 Agent 的边界
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/09-agent-infra/index.html"
+                           class="nav-article">
+                            Agent Infra：从 Harness 到生产环境
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/10-loop-engineering/index.html"
+                           class="nav-article">
+                            Loop Engineering：让 Agent 自主迭代直到正确
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/11-agent-evaluation/index.html"
+                           class="nav-article">
+                            Agent 评估：怎么知道你的 Agent 好不好
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/12-coding-agent-patterns/index.html"
+                           class="nav-article">
+                            Coding Agent：最成功的 Agent 落地形态
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/13-context-engineering/index.html"
+                           class="nav-article">
+                            Context Engineering：系统化设计模型输入
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/14-multimodal-realtime/index.html"
+                           class="nav-article">
+                            多模态与实时交互 Agent
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/15-agent-self-evolution/index.html"
+                           class="nav-article">
+                            Agent 自进化：不改权重也能持续变强
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/16-advanced-rag-memory/index.html"
+                           class="nav-article">
+                            高级 RAG 与记忆架构
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-basic/17-async-event-driven/index.html"
+                           class="nav-article">
+                            异步 Agent 与事件驱动架构
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="nav-module">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/learn-langgraph/index.html"
+                           class="nav-module-link">
+                            LangGraph
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/learn-langgraph/01-what-is-langgraph/index.html"
+                           class="nav-article">
+                            LangGraph 是什么，为什么不用链式调用
+                        </a>
+                        
+                        
+                        <a href="/learn-langgraph/02-state-node-graph/index.html"
+                           class="nav-article">
+                            State、Node、Graph 三件套
+                        </a>
+                        
+                        
+                        <a href="/learn-langgraph/03-sequential-graph/index.html"
+                           class="nav-article">
+                            顺序图：第一个可运行的 Workflow
+                        </a>
+                        
+                        
+                        <a href="/learn-langgraph/04-conditional-edges/index.html"
+                           class="nav-article">
+                            条件分支：add_conditional_edges
+                        </a>
+                        
+                        
+                        <a href="/learn-langgraph/05-parallel-workflows/index.html"
+                           class="nav-article">
+                            并行执行：Fan-out / Fan-in
+                        </a>
+                        
+                        
+                        <a href="/learn-langgraph/06-prompt-chaining/index.html"
+                           class="nav-article">
+                            Prompt Chaining：分步生成
+                        </a>
+                        
+                        
+                        <a href="/learn-langgraph/07-llm-integration/index.html"
+                           class="nav-article">
+                            接入 LLM：OpenAI 与 HuggingFace
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="nav-module">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/learn-sdk-frameworks/index.html"
+                           class="nav-module-link">
+                            SDK 框架
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/learn-sdk-frameworks/01-openai-agents-sdk/index.html"
+                           class="nav-article">
+                            OpenAI Agents SDK：Agent、Tool、Handoff
+                        </a>
+                        
+                        
+                        <a href="/learn-sdk-frameworks/02-google-gemini-sdk/index.html"
+                           class="nav-article">
+                            Google genai SDK：Gemini + Vertex AI 多模型
+                        </a>
+                        
+                        
+                        <a href="/learn-sdk-frameworks/03-claude-anthropic-sdk/index.html"
+                           class="nav-article">
+                            Claude Anthropic SDK：Messages API 与 Tool Use
+                        </a>
+                        
+                        
+                        <a href="/learn-sdk-frameworks/04-sdk-comparison/index.html"
+                           class="nav-article">
+                            三大 SDK 横向对比：怎么选
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="nav-module">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/learn-agent-survey/index.html"
+                           class="nav-module-link">
+                            框架调研
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/learn-agent-survey/01-agentscope/index.html"
+                           class="nav-article">
+                            AgentScope：阿里的多 Agent 框架
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-survey/02-mastra/index.html"
+                           class="nav-article">
+                            Mastra：TypeScript 原生 Agent 框架
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-survey/03-semantic-kernel/index.html"
+                           class="nav-article">
+                            Semantic Kernel：微软的企业级 AI SDK
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-survey/04-eino/index.html"
+                           class="nav-article">
+                            Eino：字节跳动的 Go 语言 Agent 框架
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-survey/05-gitagent/index.html"
+                           class="nav-article">
+                            GitAgent：代码仓库智能操作
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-survey/06-harness/index.html"
+                           class="nav-article">
+                            手搓 Agent：从原理到实现
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-survey/07-agentuniverse/index.html"
+                           class="nav-article">
+                            AgentUniverse：华为的企业级 Agent 平台
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-survey/08-deerflow/index.html"
+                           class="nav-article">
+                            DeerFlow：字节跳动的 Deep Research 框架
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-survey/09-langchain/index.html"
+                           class="nav-article">
+                            LangChain：最流行的 LLM 框架
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-survey/10-google-adk/index.html"
+                           class="nav-article">
+                            Google ADK：官方 Agent 开发套件
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-survey/11-skills-claudecode/index.html"
+                           class="nav-article">
+                            Skills + Claude Code：模块化技能系统
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-survey/12-vercel-ai-sdk/index.html"
+                           class="nav-article">
+                            Vercel AI SDK：全栈 AI 应用框架
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-survey/13-autogen/index.html"
+                           class="nav-article">
+                            AutoGen：微软的多 Agent 对话框架
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="nav-module">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/learn-openclaw/index.html"
+                           class="nav-module-link">
+                            OpenClaw Agent
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/learn-openclaw/01-core-idea/index.html"
+                           class="nav-article">
+                            为什么要自己写 Agent
+                        </a>
+                        
+                        
+                        <a href="/learn-openclaw/02-node-to-agent/index.html"
+                           class="nav-article">
+                            Agent Loop：EventStream 核心循环
+                        </a>
+                        
+                        
+                        <a href="/learn-openclaw/03-rag/index.html"
+                           class="nav-article">
+                            RAG：检索增强工程实现
+                        </a>
+                        
+                        
+                        <a href="/learn-openclaw/04-tools/index.html"
+                           class="nav-article">
+                            工具系统：MCP 与并行执行
+                        </a>
+                        
+                        
+                        <a href="/learn-openclaw/05-memory/index.html"
+                           class="nav-article">
+                            Context Engine：记忆架构
+                        </a>
+                        
+                        
+                        <a href="/learn-openclaw/06-multi-agent/index.html"
+                           class="nav-article">
+                            Multi-Agent：隔离与路由
+                        </a>
+                        
+                        
+                        <a href="/learn-openclaw/07-pi-mono/index.html"
+                           class="nav-article">
+                            读懂 pi-mono 源码
+                        </a>
+                        
+                        
+                        <a href="/learn-openclaw/08-build-openclaw/index.html"
+                           class="nav-article">
+                            构建你的 OpenClaw
+                        </a>
+                        
+                        
+                        <a href="/learn-openclaw/09-interview/index.html"
+                           class="nav-article">
+                            面试与实习准备
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="nav-module">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/learn-claude-code/index.html"
+                           class="nav-module-link">
+                            Claude Code
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/learn-claude-code/01-agent-loop/index.html"
+                           class="nav-article">
+                            Agent Loop：一个循环就是一个 Agent
+                        </a>
+                        
+                        
+                        <a href="/learn-claude-code/02-tool-use/index.html"
+                           class="nav-article">
+                            Tool Use：扩展模型能触达的边界
+                        </a>
+                        
+                        
+                        <a href="/learn-claude-code/03-todo-write/index.html"
+                           class="nav-article">
+                            TodoWrite：让 Agent 不再迷路
+                        </a>
+                        
+                        
+                        <a href="/learn-claude-code/04-subagent/index.html"
+                           class="nav-article">
+                            Subagent：上下文隔离的正确姿势
+                        </a>
+                        
+                        
+                        <a href="/learn-claude-code/05-skill-loading/index.html"
+                           class="nav-article">
+                            Skill Loading：按需加载领域知识
+                        </a>
+                        
+                        
+                        <a href="/learn-claude-code/06-context-compact/index.html"
+                           class="nav-article">
+                            Context Compact：三层压缩换无限会话
+                        </a>
+                        
+                        
+                        <a href="/learn-claude-code/07-task-system/index.html"
+                           class="nav-article">
+                            Task System：持久化任务图
+                        </a>
+                        
+                        
+                        <a href="/learn-claude-code/08-background-tasks/index.html"
+                           class="nav-article">
+                            Background Tasks：非阻塞工具执行
+                        </a>
+                        
+                        
+                        <a href="/learn-claude-code/09-agent-teams/index.html"
+                           class="nav-article">
+                            Agent Teams：多 Agent 协作
+                        </a>
+                        
+                        
+                        <a href="/learn-claude-code/10-team-protocols/index.html"
+                           class="nav-article">
+                            Team Protocols：结构化通信协议
+                        </a>
+                        
+                        
+                        <a href="/learn-claude-code/11-autonomous-agents/index.html"
+                           class="nav-article">
+                            Autonomous Agents：自组织团队
+                        </a>
+                        
+                        
+                        <a href="/learn-claude-code/12-worktree-isolation/index.html"
+                           class="nav-article">
+                            Worktree 隔离：多 Agent 并行不踩踏
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="nav-module">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/learn-deepseek-harness/index.html"
+                           class="nav-module-link">
+                            DeepSeek Harness
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/learn-deepseek-harness/01-what-is-harness/index.html"
+                           class="nav-article">
+                            DeepSeek Harness：一切皆插件的 Agent 运行时
+                        </a>
+                        
+                        
+                        <a href="/learn-deepseek-harness/02-cordis-plugin-kernel/index.html"
+                           class="nav-article">
+                            声明式与命令式：Cordis 的五个核心概念
+                        </a>
+                        
+                        
+                        <a href="/learn-deepseek-harness/03-profile-bundle-patch/index.html"
+                           class="nav-article">
+                            运行中的 DSH：插件树、组合层与能力接缝
+                        </a>
+                        
+                        
+                        <a href="/learn-deepseek-harness/04-llm-seam/index.html"
+                           class="nav-article">
+                            LLM 接缝：把模型差异关在适配器里
+                        </a>
+                        
+                        
+                        <a href="/learn-deepseek-harness/05-agent-loop/index.html"
+                           class="nav-article">
+                            Agent Loop：控制平面如何推进任务
+                        </a>
+                        
+                        
+                        <a href="/learn-deepseek-harness/06-tool-pipeline/index.html"
+                           class="nav-article">
+                            Tool Pipeline：能力为什么不能直接等于权限
+                        </a>
+                        
+                        
+                        <a href="/learn-deepseek-harness/07-session-log/index.html"
+                           class="nav-article">
+                            Session Log：为什么日志就是事实源
+                        </a>
+                        
+                        
+                        <a href="/learn-deepseek-harness/08-inbox-control/index.html"
+                           class="nav-article">
+                            Inbox 控制：为什么用户插话必须有自己的语义
+                        </a>
+                        
+                        
+                        <a href="/learn-deepseek-harness/09-code-mode/index.html"
+                           class="nav-article">
+                            Code Mode：上下文压缩不等于安全隔离
+                        </a>
+                        
+                        
+                        <a href="/learn-deepseek-harness/10-context-compaction-cost/index.html"
+                           class="nav-article">
+                            Context Compaction：把上下文当作工作集管理
+                        </a>
+                        
+                        
+                        <a href="/learn-deepseek-harness/11-security-boundary/index.html"
+                           class="nav-article">
+                            安全边界：把信任放到模型之外
+                        </a>
+                        
+                        
+                        <a href="/learn-deepseek-harness/12-subagent-orchestration/index.html"
+                           class="nav-article">
+                            Subagent 编排：扩展能力而不是复制 Loop
+                        </a>
+                        
+                        
+                        <a href="/learn-deepseek-harness/13-runtime-surfaces/index.html"
+                           class="nav-article">
+                            Runtime Surfaces：一套运行时如何服务多个宿主
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="nav-module">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/learn-agent-training/index.html"
+                           class="nav-module-link">
+                            Agent 训练实战
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/learn-agent-training/01-agent-sft/index.html"
+                           class="nav-article">
+                            Agent SFT 关键细节：从轨迹数据到 Loss Mask
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-training/02-agent-rl/index.html"
+                           class="nav-article">
+                            Agent RL 实战：用强化学习提升推理与决策质量
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-training/03-grpo-vs-ppo/index.html"
+                           class="nav-article">
+                            GRPO vs PPO：Agent 强化学习算法深度对比与选型
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-training/04-data-mix/index.html"
+                           class="nav-article">
+                            训练数据配比实战：Agent 不只吃轨迹数据
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-training/05-agent-eval/index.html"
+                           class="nav-article">
+                            Agent 评测：怎么衡量训练效果
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-training/06-train-to-deploy/index.html"
+                           class="nav-article">
+                            从 SFT 到部署：Agent 模型上线全流程
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-training/07-training-environment-engineering/index.html"
+                           class="nav-article">
+                            Agent 训练环境工程：从仿真沙箱到数据回流闭环
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="nav-module">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/learn-agent-practice/index.html"
+                           class="nav-module-link">
+                            Agent 应用实战
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/learn-agent-practice/01-vibe-coding-homepage/index.html"
+                           class="nav-article">
+                            从 0 开始 Vibe Coding：用 Codex 发布个人主页
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-practice/02-ai-coding-interview/index.html"
+                           class="nav-article">
+                            AI Coding 面试：解题流程与交付策略
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-practice/03-daily-dev-workflow/index.html"
+                           class="nav-article">
+                            日常开发中的 Agent 工作流
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-practice/04-auto-harness/index.html"
+                           class="nav-article">
+                            Auto Harness 迭代实战
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-practice/05-eval-driven-practice/index.html"
+                           class="nav-article">
+                            Eval-Driven Agent Practice：用评估驱动 Agent 工作流迭代
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="nav-module">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/learn-pi/index.html"
+                           class="nav-module-link">
+                            Pi Coding Agent
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/learn-pi/01-what-is-pi/index.html"
+                           class="nav-article">
+                            Pi 是什么：定位、架构与 Agent Loop
+                        </a>
+                        
+                        
+                        <a href="/learn-pi/02-pi-ai-provider/index.html"
+                           class="nav-article">
+                            pi-ai：统一多 Provider 的适配层设计
+                        </a>
+                        
+                        
+                        <a href="/learn-pi/03-extension-system/index.html"
+                           class="nav-article">
+                            扩展体系：Skill、Extension 与 Package
+                        </a>
+                        
+                        
+                        <a href="/learn-pi/04-mcp-adapter/index.html"
+                           class="nav-article">
+                            Pi 为什么不内置 MCP：Adapter 与 Token 取舍
+                        </a>
+                        
+                        
+                        <a href="/learn-pi/05-security-model/index.html"
+                           class="nav-article">
+                            安全模型：Project Trust、权限门禁与系统隔离
+                        </a>
+                        
+                        
+                        <a href="/learn-pi/06-ecosystem/index.html"
+                           class="nav-article">
+                            生态使用：发现、审计与退出策略
+                        </a>
+                        
+                        
+                        <a href="/learn-pi/07-comparison/index.html"
+                           class="nav-article">
+                            Pi vs Claude Code vs DSH：按约束选择 Harness
+                        </a>
+                        
+                        
+                        <a href="/learn-pi/08-session-runtime/index.html"
+                           class="nav-article">
+                            Session Runtime：树形历史、恢复与 Compaction
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="nav-module">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/learn-codex/index.html"
+                           class="nav-module-link">
+                            OpenAI Codex CLI
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/learn-codex/01-what-is-codex/index.html"
+                           class="nav-article">
+                            Codex CLI 是什么：定位、架构与 Agent Loop
+                        </a>
+                        
+                        
+                        <a href="/learn-codex/02-config-permission/index.html"
+                           class="nav-article">
+                            配置与权限系统：TOML 层级与三种审批策略
+                        </a>
+                        
+                        
+                        <a href="/learn-codex/03-sandbox-security/index.html"
+                           class="nav-article">
+                            沙箱与安全模型：平台原生隔离的工程边界
+                        </a>
+                        
+                        
+                        <a href="/learn-codex/04-mcp-integration/index.html"
+                           class="nav-article">
+                            MCP 深度集成：工具协议与审批边界
+                        </a>
+                        
+                        
+                        <a href="/learn-codex/05-codex-sdk/index.html"
+                           class="nav-article">
+                            Codex SDK：Thread-based 编程式 Agent 接口
+                        </a>
+                        
+                        
+                        <a href="/learn-codex/06-developer-experience/index.html"
+                           class="nav-article">
+                            开发者体验与生态评估
+                        </a>
+                        
+                        
+                        <a href="/learn-codex/07-codex-vs-claude-code/index.html"
+                           class="nav-article">
+                            Codex vs Claude Code vs DSH
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="nav-module is-open">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/learn-agent-interview/index.html"
+                           class="nav-module-link is-active">
+                            Agent 面试通关
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/learn-agent-interview/01-architecture-design/index.html"
+                           class="nav-article">
+                            架构选型
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/02-tool-management/index.html"
+                           class="nav-article">
+                            工具管理
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/03-fault-tolerance/index.html"
+                           class="nav-article">
+                            容错与鲁棒性
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/04-memory-context/index.html"
+                           class="nav-article">
+                            记忆与上下文
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/05-eval-and-vision/index.html"
+                           class="nav-article">
+                            评估与全局观
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/06-multi-agent-collab/index.html"
+                           class="nav-article">
+                            多智能体协作
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/07-engineering-pitfalls/index.html"
+                           class="nav-article">
+                            工程化踩坑
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/08-prompt-engineering/index.html"
+                           class="nav-article is-current">
+                            Prompt 工程与框架原理
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/09-rag-retrieval/index.html"
+                           class="nav-article">
+                            RAG 与检索系统
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/10-training-and-data/index.html"
+                           class="nav-article">
+                            训练、数据与模型优化
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/11-ai-code-testing/index.html"
+                           class="nav-article">
+                            AI 代码分析与测试
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/12-business-ai-engineering/index.html"
+                           class="nav-article">
+                            业务 AI 工程分析
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/13-project-deep-dive/index.html"
+                           class="nav-article">
+                            简历项目拷打
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/14-company-preferences/index.html"
+                           class="nav-article">
+                            各公司面试偏好
+                        </a>
+                        
+                        
+                        <a href="/learn-agent-interview/15-agent-concepts/index.html"
+                           class="nav-article">
+                            概念考察
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+                <div class="nav-module">
+                    <div class="nav-module-row">
+                        
+                        <button class="nav-toggle-btn" type="button" aria-label="展开">
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                <path d="M2 1.5l3 2.5-3 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        
+                        <a href="/final-project/index.html"
+                           class="nav-module-link">
+                            Final Project
+                        </a>
+                    </div>
+                    
+                    <div class="nav-articles">
+                        
+                        
+                        <a href="/final-project/01-prd/index.html"
+                           class="nav-article">
+                            PRD：产品需求文档
+                        </a>
+                        
+                        
+                        <a href="/final-project/02-architecture/index.html"
+                           class="nav-article">
+                            系统架构设计
+                        </a>
+                        
+                        
+                        <a href="/final-project/03-query-engine/index.html"
+                           class="nav-article">
+                            Query Engine 实现
+                        </a>
+                        
+                        
+                        <a href="/final-project/04-tools-skills/index.html"
+                           class="nav-article">
+                            Tools & Skills 实现
+                        </a>
+                        
+                        
+                        <a href="/final-project/05-knowledge-base/index.html"
+                           class="nav-article">
+                            知识库构建
+                        </a>
+                        
+                        
+                        <a href="/final-project/06-context-memory/index.html"
+                           class="nav-article">
+                            Context & Memory
+                        </a>
+                        
+                        
+                        <a href="/final-project/07-permission-session/index.html"
+                           class="nav-article">
+                            Permission & Session
+                        </a>
+                        
+                        
+                        <a href="/final-project/08-hook-command/index.html"
+                           class="nav-article">
+                            Hook & Command
+                        </a>
+                        
+                        
+                        <a href="/final-project/09-sub-agent/index.html"
+                           class="nav-article">
+                            Sub-agent 编排
+                        </a>
+                        
+                        
+                        <a href="/final-project/10-stt-speech/index.html"
+                           class="nav-article">
+                            STT 集成与语音分析
+                        </a>
+                        
+                        
+                        <a href="/final-project/11-deploy-demo/index.html"
+                           class="nav-article">
+                            部署与演示
+                        </a>
+                        
+                        
+                        <a href="/final-project/12-web-ui/index.html"
+                           class="nav-article">
+                            Web UI 交互设计
+                        </a>
+                        
+                    </div>
+                    
+                </div>
+                
+            </aside>
+
+            <!-- Center: article content -->
+            <article class="doc-article">
+                
+                <p class="doc-eyebrow">Agent 面试通关 / 08</p>
+                
+                <h1 id="prompt-工程与框架原理模板构建skills-机制">Prompt 工程与框架原理：模板构建、Skills 机制</h1>
+
+<p>Prompt 工程不是“写提示词”，是一个<strong>分层组装系统</strong>。面试官问这个方向时，考的是你能不能把 Prompt 从“拼字符串”做成“模板工程”，以及你对 Agent 框架内部机制的理解深度。</p>
+
+<hr />
+
+<h2 id="prompt-模板方法">Prompt 模板方法</h2>
+
+<h3 id="q提示词模板是怎么构建的">Q：提示词模板是怎么构建的？</h3>
+
+<blockquote>
+  <p>来源：抖音基础架构 Agent 一面</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“把任务描述和代码拼成一个 Prompt 发给模型。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>提示词模板不是字符串拼接，是一个<strong>分层组装系统</strong>：</p>
+
+<ol>
+  <li><strong>System Prompt 层</strong>：定义角色（“你是一个资深测试工程师”）、输出格式约束（“只输出可执行的测试代码，不要解释”）、语言和框架约束（“使用 pytest”）</li>
+  <li><strong>上下文注入层</strong>：把待测函数的源码、函数签名、依赖的类型定义、已有的测试用例作为参考注入。这里有个关键决策——<strong>注入多少上下文</strong>。太少模型不理解代码，太多撑爆窗口且干扰生成</li>
+  <li><strong>任务指令层</strong>：具体要生成什么——单元测试、边界测试、异常路径测试。不同测试目标对应不同的指令模板</li>
+  <li><strong>Few-shot 示例层</strong>：给 1-2 个同项目风格的测试用例作为示范，让模型对齐代码风格和断言习惯</li>
+</ol>
+
+<p>模板不是静态的，会根据<strong>待测代码的特征动态调整</strong>——比如纯函数用轻量模板，有外部依赖的函数自动加上 mock 引导指令。模板还需要版本管理和 A/B 测试，不同模板对不同类型代码的效果差异很大。</p>
+
+<p><strong>差距在哪</strong>：新手把 Prompt 当成一次性的字符串拼接。高手的回答展示了一个四层分离的模板系统——角色、上下文、指令、示例各司其职，且能根据输入特征动态调整。面试官想看的是你有没有把 Prompt 当成一个需要版本管理和测试的工程产物。</p>
+
+<hr />
+
+<h2 id="skill-与框架原理">Skill 与框架原理</h2>
+
+<h3 id="qskills-的原理有没有了解过怎么实现的">Q：Skills 的原理有没有了解过？怎么实现的？</h3>
+
+<blockquote>
+  <p>来源：抖音基础架构 Agent 一面 【小红书AI应用开发同题：Skills了解+如何管理各个Skills】【CVTE AI应用工程师一面追问：怎么理解 Skill？能解决什么问题？怎么写 MCP？】</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“就是预定义的 Prompt 模板。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>Skills 是 Agent 系统中<strong>可复用的能力单元</strong>，比 Prompt 模板更完整。一个 Skill 通常包含：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Skill = {
+    触发条件:  意图匹配规则 / 关键词 / 正则,
+    Prompt 模板:  针对这个能力的专用提示词,
+    工具集合:  这个 Skill 能调用哪些工具,
+    输出约束:  输出格式和校验规则,
+    上下文策略:  需要注入哪些额外信息
+}
+</code></pre></div></div>
+
+<p><strong>实现机制</strong>：</p>
+
+<ol>
+  <li><strong>Skill 注册表</strong>：所有 Skill 以文件形式存储（比如 <code class="language-plaintext highlighter-rouge">SKILL.md</code>），包含名称、描述、触发条件、完整的 Prompt 指令。系统启动时加载到内存</li>
+  <li><strong>触发匹配</strong>：用户输入或 Agent 行为触发时，先做意图匹配——可以是关键词匹配（“整理面经” → 触发 <code class="language-plaintext highlighter-rouge">new-article</code> Skill）、正则匹配，或者用 embedding 做语义匹配</li>
+  <li><strong>动态 Prompt 组装</strong>：匹配到 Skill 后，把 Skill 的 Prompt 模板展开，注入当前上下文（用户消息、项目状态等），形成完整的 Prompt 发给模型</li>
+  <li><strong>工具权限隔离</strong>：不同 Skill 可以访问不同的工具子集——代码生成 Skill 能调文件读写工具，但搜索 Skill 只能调检索工具</li>
+</ol>
+
+<p><strong>和普通 Prompt 模板的区别</strong>：Prompt 模板是静态文本，Skill 是<strong>一个完整的执行上下文</strong>——它不只定义了”说什么”，还定义了”能做什么”和”在什么条件下触发”。</p>
+
+<p><strong>怎么理解 Skill 的本质</strong>：</p>
+
+<p>Skill 本质上是<strong>可复用的、领域特定的上下文注入模块</strong>。理解 Skill 有三个层次：</p>
+
+<p><strong>第一层：Skill 是结构化的 Prompt 模板</strong></p>
+<ul>
+  <li>每个 Skill 是一个 Markdown 文件，包含任务描述、执行步骤、注意事项</li>
+  <li>当 Skill 被触发时，其内容被注入到模型的上下文中，指导模型的行为</li>
+</ul>
+
+<p><strong>第二层：Skill 是领域知识的封装</strong></p>
+<ul>
+  <li>不只是指令，还包含领域专业知识（如”面试题分类应该怎么做”、”代码审查应该检查什么”）</li>
+  <li>把专家经验固化成可执行的流程，让模型在特定领域表现得像专家</li>
+</ul>
+
+<p><strong>第三层：Skill 是 Agent 的”职业技能树”</strong></p>
+<ul>
+  <li>每个 Skill 让 Agent 获得一项专业能力</li>
+  <li>Skill 之间可以组合——一个复杂任务可能触发多个 Skill 协同工作</li>
+  <li>和 MCP 的区别：MCP 给 Agent 提供<strong>工具</strong>（能做什么），Skill 给 Agent 提供<strong>知识和方法论</strong>（怎么做、为什么这样做）</li>
+</ul>
+
+<table>
+  <thead>
+    <tr>
+      <th>对比维度</th>
+      <th>Skill</th>
+      <th>MCP Tool</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>本质</td>
+      <td>领域知识 + 执行流程</td>
+      <td>外部能力接口</td>
+    </tr>
+    <tr>
+      <td>注入方式</td>
+      <td>加载到上下文</td>
+      <td>注册为可调用工具</td>
+    </tr>
+    <tr>
+      <td>作用</td>
+      <td>指导模型”怎么思考和行动”</td>
+      <td>让模型”能调用外部服务”</td>
+    </tr>
+    <tr>
+      <td>类比</td>
+      <td>教科书/操作手册</td>
+      <td>工具箱里的工具</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>理解了这三层，就能回答”为什么 Claude Code 能在不同项目中表现不同”——因为不同项目配置了不同的 Skill，Agent 的”专业能力”随 Skill 配置动态变化。</p>
+
+<p><strong>差距在哪</strong>：新手只看到了 Skill 的表面（Prompt 模板），高手看到了完整的执行上下文——触发条件、工具权限、上下文策略。面试官考的是你对 Agent 框架的理解深度——不只是用框架，还理解框架怎么设计的。</p>
+
+<p><strong>追问：创建 Skill 有哪些方式？除了自然语言描述，还有什么？</strong></p>
+
+<blockquote>
+  <p>来源：蚂蚁 Agent 开发一面</p>
+</blockquote>
+
+<p>Skill 的创建方式不止一种，按自动化程度从低到高：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>方式</th>
+      <th>描述</th>
+      <th>适用场景</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>手写 Markdown</strong></td>
+      <td>直接在 <code class="language-plaintext highlighter-rouge">.claude/skills/</code> 下创建 <code class="language-plaintext highlighter-rouge">.md</code> 文件，写 frontmatter + 正文</td>
+      <td>复杂领域 Skill，需要精细控制</td>
+    </tr>
+    <tr>
+      <td><strong>自然语言描述</strong></td>
+      <td>告诉 Agent「帮我创建一个做 X 的 Skill」，Agent 自动生成 .md 文件</td>
+      <td>快速原型，让 AI 帮你写 Skill</td>
+    </tr>
+    <tr>
+      <td><strong>Skill Creator 工具</strong></td>
+      <td>用专门的 skill-creator 元 Skill，引导式创建、测试和优化 Skill</td>
+      <td>标准化流程，带评测验证</td>
+    </tr>
+    <tr>
+      <td><strong>从已有 Skill 派生</strong></td>
+      <td>复制一个相似 Skill 后修改触发条件和内容</td>
+      <td>同类 Skill 批量创建</td>
+    </tr>
+    <tr>
+      <td><strong>CLAUDE.md 内联</strong></td>
+      <td>在项目 CLAUDE.md 中直接写行为指令（非独立文件）</td>
+      <td>简单的项目级约束，不值得独立成 Skill</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>关键认知：Skill 本质是 Markdown 文件，所以创建方式的区别不在于「用什么工具创建」，而在于<strong>内容质量</strong>——触发条件是否精准、执行步骤是否清晰、边界条件是否覆盖。</p>
+
+<hr />
+
+<h3 id="qclaude-code-的架构有什么比较创新的设计">Q：Claude Code 的架构有什么比较创新的设计？</h3>
+
+<blockquote>
+  <p>来源：腾讯 Agent 应用开发一面</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“它很强，能直接改代码。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>Claude Code 在架构上有几个值得关注的设计：</p>
+
+<ol>
+  <li><strong>System Prompt 即规则引擎</strong>：把项目约定、编码规范、安全约束全部写进 System Prompt（通过 CLAUDE.md），让模型在每次决策时都受约束。这比在代码里硬编码规则更灵活——改一个文件就能改变 Agent 行为，不需要重新部署</li>
+  <li><strong>工具调用的权限分级</strong>：不同工具有不同的权限级别——读文件可以自动执行，写文件需要用户确认，危险操作（删除、push）需要显式授权。这个分级机制在安全和效率之间取得了平衡</li>
+  <li><strong>上下文自动压缩</strong>：对话过长时自动做上下文压缩（summary），保留关键信息丢弃冗余。用户无感知，但解决了长会话的 token 限制问题</li>
+  <li><strong>Hooks 机制</strong>：允许用户在工具调用前后插入自定义的 shell 命令（pre/post hooks），实现自动化的 lint、测试、格式化——把 Agent 行为嵌入到已有的开发工作流中</li>
+</ol>
+
+<p>创新的核心不是某个单点技术，而是<strong>把 Agent 当作开发者工作流的一部分来设计</strong>——不是替代开发者，而是嵌入开发者的工具链。</p>
+
+<p><strong>从源码角度看 Claude Code 的设计哲学</strong>：</p>
+
+<p>Claude Code 的开源让我们能直接看到生产级 Code Agent 的设计选择，有几个特别值得学习的理念：</p>
+
+<p><strong>1. 上下文工程优先于 Prompt 工程</strong></p>
+
+<p>Claude Code 不是靠一个精心调教的 System Prompt 来驱动的，而是通过<strong>多层上下文注入</strong>构建 Agent 的认知：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>上下文层级</th>
+      <th>来源</th>
+      <th>作用</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>系统层</td>
+      <td>内置 System Prompt</td>
+      <td>定义 Agent 身份和基本行为规范</td>
+    </tr>
+    <tr>
+      <td>项目层</td>
+      <td>CLAUDE.md 文件</td>
+      <td>项目特定的规则、约定、架构信息</td>
+    </tr>
+    <tr>
+      <td>技能层</td>
+      <td>Skills 目录</td>
+      <td>可复用的领域知识和操作流程</td>
+    </tr>
+    <tr>
+      <td>会话层</td>
+      <td>对话历史 + 工具结果</td>
+      <td>当前任务的动态上下文</td>
+    </tr>
+    <tr>
+      <td>环境层</td>
+      <td>git status、文件内容、终端输出</td>
+      <td>实时的代码库状态</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>这五层上下文的动态组装，比任何静态 Prompt 都强大——Agent 的能力上限取决于上下文质量，不是 Prompt 技巧。</p>
+
+<p><strong>2. 渐进式信息披露（Progressive Disclosure）</strong></p>
+
+<p>Claude Code 不会一次性把整个项目塞进上下文。而是按需加载——先读目录结构，需要时再读具体文件，用 grep 定位再精读。这种”先粗后细”的策略：</p>
+<ul>
+  <li>节省 token：只加载真正需要的信息</li>
+  <li>减少噪声：避免无关代码干扰模型判断</li>
+  <li>更像人类开发者的工作方式</li>
+</ul>
+
+<p><strong>3. 工具即能力边界</strong></p>
+
+<p>Claude Code 通过工具定义（Read、Edit、Bash、Agent 等）严格限定了 Agent 能做什么。模型不能”自由发挥”——它只能通过预定义的工具与环境交互。这个设计把模型的不确定性限制在了工具调用的粒度内，而每个工具调用都可以做权限控制和审计。</p>
+
+<p><strong>4. Hooks 机制实现行为可定制</strong></p>
+
+<p>用户可以通过 hooks 在工具调用前后注入自定义逻辑（如自动格式化、安全检查），而不需要修改 Agent 本身。这是一种<strong>开放-封闭原则</strong>的体现——Agent 行为对扩展开放，对修改封闭。</p>
+
+<p><strong>差距在哪</strong>：新手只感受到了”强”。高手从 System Prompt 规则引擎、权限分级、上下文压缩、Hooks 四个具体设计点分析了创新。面试官考的是你对 Agent 框架的拆解和分析能力。</p>
+
+<hr />
+
+<h2 id="prompt-标准与-skill-体系">Prompt 标准与 Skill 体系</h2>
+
+<h3 id="q一个好的-prompt-和一个差的-prompt-的区别">Q：一个好的 Prompt 和一个差的 Prompt 的区别？</h3>
+
+<blockquote>
+  <p>来源：腾讯 Agent 应用开发一面</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“好的 Prompt 描述清楚，差的 Prompt 太模糊。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>区别不只是“清不清楚”，是<strong>五个维度的差距</strong>：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>维度</th>
+      <th>差的 Prompt</th>
+      <th>好的 Prompt</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>任务边界</td>
+      <td>“帮我写个程序”</td>
+      <td>“写一个 Python 函数，输入用户 ID 列表，返回每个用户最近 7 天的订单总额”</td>
+    </tr>
+    <tr>
+      <td>输出格式</td>
+      <td>不指定</td>
+      <td>明确要求 JSON/代码/表格，给出示例</td>
+    </tr>
+    <tr>
+      <td>约束条件</td>
+      <td>无</td>
+      <td>“不要用第三方库”“错误时返回空字典而不是抛异常”</td>
+    </tr>
+    <tr>
+      <td>上下文</td>
+      <td>不提供</td>
+      <td>附上相关的类型定义、接口文档、已有代码</td>
+    </tr>
+    <tr>
+      <td>角色设定</td>
+      <td>无</td>
+      <td>“你是一个熟悉 SQLAlchemy 的后端工程师”</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>更深层的区别：</p>
+
+<ol>
+  <li><strong>好 Prompt 减少模型的决策空间</strong>：模型面对的选择越少，输出越稳定。“写一个函数”有无数种写法，“写一个接收 list[int] 返回 dict[int, float] 的函数”就只有有限的合理写法</li>
+  <li><strong>好 Prompt 提供失败时的指引</strong>：不只说“做什么”，还说“做不到时怎么办”——“如果找不到相关信息，回复‘信息不足，需要以下补充：…’”</li>
+  <li><strong>好 Prompt 是可迭代的</strong>：不是一次写完，而是根据模型的实际输出不断调整，做版本管理和 A/B 测试</li>
+</ol>
+
+<p><strong>差距在哪</strong>：新手只用“清楚 vs 模糊”一个维度。高手从任务边界、输出格式、约束条件、上下文、角色五个维度对比，且点出了“减少决策空间”和“可迭代”两个深层原则。面试官考的是你写 Prompt 的工程化程度。</p>
+
+<hr />
+
+<h3 id="q为什么已经有了-mcpanthropic-还要做-skillskill-里面有没有工具">Q：为什么已经有了 MCP，Anthropic 还要做 Skill？Skill 里面有没有工具？</h3>
+
+<blockquote>
+  <p>来源：字节 Agent 开发实习一面</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“Skill 就是 MCP 的升级版。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>MCP 和 Skill 不是竞争关系，而是解决<strong>两个完全不同的问题</strong>：</p>
+
+<ul>
+  <li><strong>MCP 解决的是“Agent 怎么调用外部工具”</strong>——它是一个能力协议</li>
+  <li><strong>Skill 解决的是“Agent 怎么在某个领域正确地思考和行动”</strong>——它是一个知识框架</li>
+</ul>
+
+<h3 id="为什么只有-mcp-不够">为什么只有 MCP 不够？</h3>
+
+<p>MCP 给了 Agent 工具，但没有告诉它<strong>怎么有效地使用这些工具</strong>。</p>
+
+<p>举个例子：Agent 有一个“搜索数据库”的 MCP 工具。但如果没有 Skill，它不知道：按什么顺序搜索？搜索结果怎么解读？没有结果时该怎么办？特定领域的工作流是什么？</p>
+
+<p><strong>MCP = 给一个人一套工具箱。Skill = 给他使用工具箱的专业技能。</strong></p>
+
+<h3 id="为什么现在才做-skill">为什么现在才做 Skill？</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>原因</th>
+      <th>说明</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>模型能力提升</td>
+      <td>模型变聪明了，能可靠地遵循复杂指令，基于指令的（Skill）方案变得可行</td>
+    </tr>
+    <tr>
+      <td>工程成本差异</td>
+      <td>Skill 是一个 .md 文件，任何人都能写；MCP Server 需要编码、部署、维护</td>
+    </tr>
+    <tr>
+      <td>可组合性</td>
+      <td>多个 Skill 可以自然地同时加载到上下文中；MCP 工具之间的集成更复杂</td>
+    </tr>
+    <tr>
+      <td>领域适配性</td>
+      <td>Skill 让领域专家直接编码知识，不需要工程师介入；MCP 必须由工程师实现</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="mcp-vs-skill-全维度对比">MCP vs Skill 全维度对比</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>对比维度</th>
+      <th>MCP</th>
+      <th>Skill</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>本质</td>
+      <td>能力协议（工具注册与调用）</td>
+      <td>知识框架（领域知识与方法论）</td>
+    </tr>
+    <tr>
+      <td>解决的问题</td>
+      <td>Agent 能调用什么</td>
+      <td>Agent 怎么思考和行动</td>
+    </tr>
+    <tr>
+      <td>载体</td>
+      <td>代码（Server + Client）</td>
+      <td>文档（Markdown 文件）</td>
+    </tr>
+    <tr>
+      <td>创建门槛</td>
+      <td>需要编程能力</td>
+      <td>只需领域知识</td>
+    </tr>
+    <tr>
+      <td>注入方式</td>
+      <td>注册为可调用的工具</td>
+      <td>加载到模型上下文中</td>
+    </tr>
+    <tr>
+      <td>作用时机</td>
+      <td>模型显式调用时</td>
+      <td>加载后持续影响模型行为</td>
+    </tr>
+    <tr>
+      <td>类比</td>
+      <td>工具箱里的锤子和螺丝刀</td>
+      <td>教你什么时候用锤子、什么时候用螺丝刀的操作手册</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="skill-里面有没有工具">Skill 里面有没有工具？</h3>
+
+<p>这个问题的答案是<strong>有引用，但不包含</strong>：</p>
+
+<ul>
+  <li>Skill 可以<strong>引用</strong>工具：“在第三步，执行这条 bash 命令”、“用 Edit 工具修改文件”</li>
+  <li>但 Skill 不<strong>包含</strong>工具——它包含的是<strong>关于何时、如何使用现有工具的指令</strong></li>
+  <li>Skill 通过自然语言指令来编排工具，而不是通过工具注册机制</li>
+</ul>
+
+<p>本质上，Skill 是工具的“使用说明书”，不是工具本身。</p>
+
+<p><strong>差距在哪</strong>：新手把 MCP 和 Skill 看成竞争关系，以为 Skill 是 MCP 的替代品。高手理解它们服务于不同层次——MCP 提供能力（能做什么），Skill 提供知识（怎么做），两者互补而非互斥。面试官考的是你能不能区分“工具”和“使用工具的知识”这两个抽象层次，以及你对 Agent 系统架构演进方向的理解。</p>
+
+<hr />
+
+<h3 id="q如果让你从零设计一个-skill-系统需要实现哪些核心能力">Q：如果让你从零设计一个 Skill 系统，需要实现哪些核心能力？</h3>
+
+<blockquote>
+  <p>来源：字节 Agent 开发实习一面 【蚂蚁AI应用开发二面追问：单一 Skill 模块设计思路】【阿里国际AI应用开发二面追问：多Skill可见时如何保证执行顺序 + Plan模式协调机制】【阿里国际大模型应用开发一面追问：Skill自我迭代机制本质 + Skill质量评测方法】</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“写个插件系统，注册回调函数。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>Skill 系统的设计和传统插件系统有本质区别——Skill 不是代码，是知识；调用不是函数执行，是上下文注入。围绕这个核心理念，需要实现三个核心能力：</p>
+
+<h3 id="整体架构">整体架构</h3>
+
+<pre><code class="language-mermaid">flowchart LR
+    A["用户输入"] --&gt; B["Skill 发现\n扫描触发条件"]
+    B --&gt; C{"匹配到\nSkill？"}
+    C --&gt;|"是"| D["加载 Skill 内容"]
+    C --&gt;|"否"| E["走默认流程"]
+    D --&gt; F["注入到模型上下文"]
+    F --&gt; G["模型基于 Skill\n知识执行任务"]
+</code></pre>
+
+<h3 id="核心能力一注册registration">核心能力一：注册（Registration）</h3>
+
+<p>基于文件系统的注册，不需要服务器和数据库：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>skills/
+  ├── code-review/
+  │   ├── config.yaml       # 名称、描述、触发条件、参数定义
+  │   └── skill.md          # Skill 内容（领域知识 + 执行流程）
+  ├── deploy-check/
+  │   ├── config.yaml
+  │   └── skill.md
+  └── ...
+</code></pre></div></div>
+
+<p>config 中定义的关键字段：</p>
+<ul>
+  <li><strong>name</strong>：Skill 的唯一标识</li>
+  <li><strong>description</strong>：用于发现匹配的描述（这个字段至关重要，直接决定匹配质量）</li>
+  <li><strong>triggers</strong>：触发条件（关键词、正则、显式命令）</li>
+  <li><strong>args_schema</strong>：Skill 接受的参数定义</li>
+</ul>
+
+<p>设计要点：纯文件系统，支持热重载——新增或修改 Skill 文件后立即生效，不需要重启服务。</p>
+
+<h3 id="核心能力二发现discovery">核心能力二：发现（Discovery）</h3>
+
+<p>当用户输入到达时，快速匹配最相关的 Skill：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>匹配策略</th>
+      <th>实现方式</th>
+      <th>适用场景</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>显式调用</td>
+      <td>用户输入 <code class="language-plaintext highlighter-rouge">/skill-name</code></td>
+      <td>用户明确知道要用哪个 Skill</td>
+    </tr>
+    <tr>
+      <td>关键词匹配</td>
+      <td>正则或关键词命中触发条件</td>
+      <td>简单直接，零延迟</td>
+    </tr>
+    <tr>
+      <td>语义匹配</td>
+      <td>用 embedding 计算输入与 Skill 描述的相似度</td>
+      <td>更智能，但有延迟开销</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>发现过程必须<strong>快</strong>——每条用户消息都要扫描所有 Skill 的触发条件，延迟必须可忽略。所以关键词匹配是首选，语义匹配作为兜底。</p>
+
+<h3 id="核心能力三调用invocation">核心能力三：调用（Invocation）</h3>
+
+<p>匹配到 Skill 后，执行的不是函数调用，而是<strong>上下文注入</strong>：</p>
+
+<ol>
+  <li>读取 Skill 的 .md 内容</li>
+  <li>如果 Skill 定义了参数，解析用户输入中的参数值</li>
+  <li>将 Skill 内容注入到模型的上下文中——Skill 的知识变成模型在本次会话中的“专业背景”</li>
+  <li>模型在 Skill 知识的指导下完成任务</li>
+</ol>
+
+<p><strong>关键认知：Skill 调用不是函数调用，是上下文注入。</strong> Skill 不是“执行一段代码然后返回结果”，而是“把一段领域知识注入模型的认知中，影响模型后续的所有行为”。</p>
+
+<h3 id="设计时必须考虑的问题">设计时必须考虑的问题</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>问题</th>
+      <th>解决方案</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>命名空间冲突</td>
+      <td>两个 Skill 触发条件相似时，需要优先级机制（权重或显式排序）</td>
+    </tr>
+    <tr>
+      <td>多 Skill 组合</td>
+      <td>复杂任务可能需要同时激活多个 Skill，需要定义组合规则和上下文拼接顺序</td>
+    </tr>
+    <tr>
+      <td>生命周期管理</td>
+      <td>Skill 的影响何时结束？一次任务后？整个会话？需要明确的作用域定义</td>
+    </tr>
+    <tr>
+      <td>Skill 级评测</td>
+      <td>每个 Skill 需要自己的评测集，验证注入 Skill 后模型行为是否符合预期</td>
+    </tr>
+    <tr>
+      <td>上下文预算</td>
+      <td>多个 Skill 同时加载可能撑爆上下文窗口，需要按优先级裁剪</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>差距在哪</strong>：新手按照传统插件系统的思路来设计——注册回调函数、执行代码逻辑。高手理解 Skill 系统的本质是<strong>基于文件的知识管理 + 触发式发现 + 上下文注入</strong>，和传统插件系统（代码注册 + 函数调用 + 返回结果）在架构理念上完全不同。面试官考的是你能不能跳出”一切皆代码”的思维定式，理解 LLM 时代”知识即能力”的新范式。</p>
+
+<p><strong>追问：手撕一个 Skill 系统——实现注册、发现和调用</strong></p>
+
+<blockquote>
+  <p>来源：字节抖音 Agent 开发一面</p>
+</blockquote>
+
+<p>题目要求：目录结构为 <code class="language-plaintext highlighter-rouge">.agents/skills/</code> 下每个 Skill 一个子目录，包含 <code class="language-plaintext highlighter-rouge">.yaml</code> 配置文件和 <code class="language-plaintext highlighter-rouge">scripts/*.js</code> 执行脚本。</p>
+
+<p>这道手撕题的关键不是写多少代码，而是<strong>设计清晰的三层抽象</strong>：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>注册（Registration）：扫描 .agents/skills/ 目录，解析每个子目录的 yaml 配置，建立 Skill 注册表
+发现（Discovery）：根据用户输入匹配 Skill 的触发条件（关键词/意图/正则）
+调用（Invocation）：加载匹配 Skill 的内容（知识注入）或执行脚本（动作执行）
+</code></pre></div></div>
+
+<p><strong>yaml 配置文件设计</strong>：</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">name</span><span class="pi">:</span> <span class="s">deploy-checker</span>
+<span class="na">description</span><span class="pi">:</span> <span class="s">检查部署状态并报告异常</span>
+<span class="na">triggers</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="na">pattern</span><span class="pi">:</span> <span class="s">“检查部署|部署状态|上线情况”</span>
+    <span class="na">type</span><span class="pi">:</span> <span class="s">regex</span>
+<span class="na">scripts</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="s">scripts/check_status.js</span>
+  <span class="pi">-</span> <span class="s">scripts/report.js</span>
+<span class="na">context</span><span class="pi">:</span> <span class="pi">|</span>
+  <span class="s">你是一个部署检查专家，擅长分析 CI/CD 管线状态...</span>
+</code></pre></div></div>
+
+<p><strong>核心实现思路</strong>（伪代码）：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>1. 注册：启动时递归扫描 .agents/skills/*/，
+   解析 yaml → 建立 Map&lt;name, SkillConfig&gt;
+2. 发现：用户输入到来时，遍历注册表，
+   逐个匹配 triggers（正则/关键词/语义相似度）
+   → 返回匹配度最高的 Skill（或 top-K）
+3. 调用：
+   - 如果 Skill 有 context 字段 → 注入上下文（知识型 Skill）
+   - 如果 Skill 有 scripts 字段 → 按序执行脚本（动作型 Skill）
+   - 两者可同时存在
+</code></pre></div></div>
+
+<p><strong>面试官关注的设计细节</strong>：冲突解决（多个 Skill 同时匹配时的优先级）、热加载（新增 Skill 不需要重启）、错误隔离（一个 Skill 的脚本崩溃不影响其他 Skill）。</p>
+
+<hr />
+
+<h3 id="qlobechat-的插件和-claude-code-的-skills-有什么本质区别">Q：LobeChat 的插件和 Claude Code 的 Skills 有什么本质区别？</h3>
+
+<blockquote>
+  <p>来源：字节实习二面</p>
+</blockquote>
+
+<p><strong>新手答</strong>：”都是给 AI 加功能的，只是平台不一样。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>表面看都是”扩展能力”，但<strong>架构理念完全不同</strong>——LobeChat 的插件是传统的代码执行模型，Claude Code 的 Skills 是 Prompt 注入模型：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>维度</th>
+      <th>LobeChat 插件</th>
+      <th>Claude Code Skills</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>本质</strong></td>
+      <td>可执行的代码模块（API 调用）</td>
+      <td>Markdown 文件（知识 + 指令）</td>
+    </tr>
+    <tr>
+      <td><strong>触发方式</strong></td>
+      <td>模型输出 function_call → 执行代码</td>
+      <td>用户输入匹配描述 → 注入到上下文</td>
+    </tr>
+    <tr>
+      <td><strong>执行者</strong></td>
+      <td>插件的代码运行时</td>
+      <td>模型本身（按 Skill 中的指令行动）</td>
+    </tr>
+    <tr>
+      <td><strong>能力边界</strong></td>
+      <td>取决于代码能做什么</td>
+      <td>取决于模型能理解和执行什么</td>
+    </tr>
+    <tr>
+      <td><strong>开发方式</strong></td>
+      <td>写代码、定义 API schema、部署服务</td>
+      <td>写 Markdown、定义触发条件和步骤</td>
+    </tr>
+    <tr>
+      <td><strong>状态管理</strong></td>
+      <td>插件代码自己管状态</td>
+      <td>无状态，每次重新注入</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>LobeChat 插件的工作流</strong>：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>用户输入 → 模型判断需要调用插件 → 输出 function_call JSON
+→ LobeChat 解析 JSON → 调用插件 API → 返回结果 → 模型组织回答
+</code></pre></div></div>
+
+<p>插件是<strong>模型的手</strong>——模型决定要不要用、怎么用，但执行逻辑是代码写死的。</p>
+
+<p><strong>Claude Code Skills 的工作流</strong>：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>用户输入 → 匹配 Skill 的触发描述 → 将 Skill 的 Markdown 内容注入上下文
+→ 模型按照 Skill 中的步骤指引行动（调工具、写代码、组织输出）
+</code></pre></div></div>
+
+<p>Skill 是<strong>模型的知识</strong>——不执行代码，而是告诉模型”遇到这类任务该怎么做”。模型拥有完整的执行自主权。</p>
+
+<p><strong>核心区别的一句话总结</strong>：LobeChat 插件是<strong>”代码做事，模型指挥”</strong>；Claude Code Skills 是<strong>”模型做事，知识指导”</strong>。</p>
+
+<p><strong>差距在哪</strong>：新手把两者等同于”不同平台的同一种东西”。高手从本质（代码 vs 知识）、触发（function_call vs 描述匹配）、执行者（运行时 vs 模型）三个维度做了精确区分。面试官考的是你对 Agent 能力扩展的两种范式的理解——传统的”工具调用”范式和新兴的”知识注入”范式，各有适用场景。</p>
+
+<hr />
+
+<h2 id="prompt-结构化设计">Prompt 结构化设计</h2>
+
+<h3 id="q通常-prompt-包含哪些结构">Q：通常 Prompt 包含哪些结构？</h3>
+
+<blockquote>
+  <p>来源：淘宝闪购 AI应用研发 一面</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“角色、指令、示例，三个部分。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>生产级 Prompt 远不止三要素。一个完整的 Agent 系统 Prompt 通常包含六层结构，每层有不同的职责和优先级：</p>
+
+<p><strong>1. 身份与角色层（Identity）</strong></p>
+
+<p>定义模型是谁、基本行为准则。放在最开头，优先级最高。</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>你是一个电商客服助手，服务于XX平台的用户。
+你的回答必须准确、礼貌、简洁。
+</code></pre></div></div>
+
+<p><strong>2. 规则约束层（Rules）</strong></p>
+
+<p>硬性限制——模型绝对不能违反的规则。通常用否定句式强调。</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>- 绝不编造商品信息，不确定时说"我帮您查询"
+- 不讨论政治、宗教等敏感话题
+- 涉及退款操作必须确认订单号
+</code></pre></div></div>
+
+<p><strong>3. 上下文注入层（Context）</strong></p>
+
+<p>动态注入的背景信息——当前用户画像、历史对话摘要、检索到的知识片段。这一层每次请求都不同。</p>
+
+<p><strong>4. 工具描述层（Tools）</strong></p>
+
+<p>可用工具的定义和使用说明。通过 function calling 接口或 Prompt 内嵌的方式提供。</p>
+
+<p><strong>5. 示例层（Examples）</strong></p>
+
+<p>Few-shot 示例——展示期望的输入输出格式和推理方式。2-3 个示例通常足够，太多会挤占上下文空间。</p>
+
+<p><strong>6. 输出格式层（Output Format）</strong></p>
+
+<p>约束输出的结构——JSON、Markdown、特定模板。放在 Prompt 末尾，离模型输出最近，遵循度最高。</p>
+
+<p><strong>层级之间的优先级</strong>：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>规则约束 &gt; 身份角色 &gt; 上下文 &gt; 示例 &gt; 输出格式 &gt; 工具描述
+</code></pre></div></div>
+
+<p>当不同层的指令冲突时（比如示例中的行为违反了规则），规则约束应该胜出。在 Prompt 中可以显式声明优先级：“如果以下示例与上述规则冲突，以规则为准。”</p>
+
+<p><strong>工程实践</strong>：</p>
+
+<p>生产系统中，这六层通常不是写在一个字符串里，而是用<strong>模板引擎</strong>动态拼装——身份层和规则层固定，上下文层和工具层按需注入，示例层按任务类型切换。Prompt 版本管理和 A/B 测试也是必要的工程实践。</p>
+
+<p><strong>差距在哪</strong>：新手只知道“角色+指令+示例”三件套。高手展示了六层架构——身份、规则、上下文、工具、示例、输出格式——且理解层级间的优先级关系和动态拼装机制。面试官考的是你对 Prompt 的理解是“写一段话”还是“设计一个分层系统”。</p>
+
+<hr />
+
+<h3 id="q在调优-prompt-时你有哪些实战经验如何利用-ai-辅助自己优化-prompt">Q：在调优 Prompt 时，你有哪些实战经验？如何利用 AI 辅助自己优化 Prompt？</h3>
+
+<blockquote>
+  <p>来源：字节后端 Agent 开发二面</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“多试几遍，看哪个效果好就用哪个。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>Prompt 调优不是「碰运气」，是一个有方法论的工程流程。分两个层面回答：</p>
+
+<p><strong>一、人工调优的实战经验</strong></p>
+
+<p>核心方法论是<strong>控制变量 + 快速迭代</strong>：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>步骤</th>
+      <th>做法</th>
+      <th>关键点</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1. 建评测集</td>
+      <td>准备 20-50 条覆盖主要场景的测试 case</td>
+      <td>包含正常 case + 边界 case + 已知 bad case</td>
+    </tr>
+    <tr>
+      <td>2. 单变量调整</td>
+      <td>每次只改一个要素（角色/约束/示例/格式）</td>
+      <td>多变量同时改，效果归因不清</td>
+    </tr>
+    <tr>
+      <td>3. 定量对比</td>
+      <td>跑评测集，记录通过率变化</td>
+      <td>不要凭感觉判断「好像好了一点」</td>
+    </tr>
+    <tr>
+      <td>4. 版本管理</td>
+      <td>每个版本的 Prompt 存档 + 评测结果</td>
+      <td>方便回退和复盘</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>高频有效的调优手段（按 ROI 排序）</strong>：</p>
+
+<ol>
+  <li><strong>加约束条件</strong>：从「回答问题」到「用 JSON 格式回答，字段包含 answer 和 confidence」——约束越明确，输出越稳定</li>
+  <li><strong>加 Few-shot 示例</strong>：1-2 个好示例的效果常常超过大段指令描述</li>
+  <li><strong>拆步骤</strong>：把复杂任务拆成「先分析 → 再判断 → 最后输出」，比一步到位成功率高很多</li>
+  <li><strong>加负面指令</strong>：明确说「不要做什么」，比只说「做什么」更能避免常见错误</li>
+  <li><strong>调整上下文顺序</strong>：把最重要的信息放在开头和结尾（避免 Lost in the Middle）</li>
+</ol>
+
+<p><strong>二、AI 辅助优化 Prompt 的方法</strong></p>
+
+<table>
+  <thead>
+    <tr>
+      <th>方法</th>
+      <th>做法</th>
+      <th>适用场景</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>让 AI 分析 bad case</strong></td>
+      <td>把失败的输入输出给 AI，问「为什么这个 Prompt 在这个 case 上失败了」</td>
+      <td>定位单个 case 的失败原因</td>
+    </tr>
+    <tr>
+      <td><strong>让 AI 生成变体</strong></td>
+      <td>给 AI 当前 Prompt + 目标，让它生成 5 个改进版本</td>
+      <td>快速探索优化方向</td>
+    </tr>
+    <tr>
+      <td><strong>让 AI 做评测</strong></td>
+      <td>LLM-as-Judge，让 AI 对两个 Prompt 版本的输出做偏好排序</td>
+      <td>评测集太大、人工评判成本高</td>
+    </tr>
+    <tr>
+      <td><strong>Meta-Prompting</strong></td>
+      <td>让 AI 扮演「Prompt 工程师」，输入任务描述，输出优化后的 Prompt</td>
+      <td>冷启动阶段快速获得基线 Prompt</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>关键认知</strong>：AI 辅助优化 Prompt 的价值不在于「自动变好」，而在于<strong>加速迭代循环</strong>——人定方向（哪里需要改进），AI 提供候选方案（怎么改），人做最终判断（哪个版本上线）。完全依赖 AI 自动优化容易陷入「过拟合评测集」的陷阱。</p>
+
+<p><strong>差距在哪</strong>：新手的「多试几遍」没有方法论，效率低且不可复现。高手展示了控制变量法 + 评测集驱动的工程化流程，且把 AI 辅助定位在加速迭代而非替代判断。面试官考的是你在 Prompt 调优上有没有系统性的工程实践。</p>
+
+<hr />
+
+<h3 id="qharness-engineering-是什么它如何演进的">Q：Harness Engineering 是什么？它如何演进的？</h3>
+
+<blockquote>
+  <table>
+    <tbody>
+      <tr>
+        <td>来源：CVTE/AI应用工程师一面</td>
+        <td>更完整的 Harness 专题见 → <a href="../15-agent-concepts/index.html">概念考察：Harness Engineering</a></td>
+      </tr>
+    </tbody>
+  </table>
+</blockquote>
+
+<p><strong>新手答</strong>：“不太了解这个概念，是不是跟测试框架有关？”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>Harness Engineering 是 Claude Code 提出的核心设计理念——<strong>用工程化的“线束”约束和增强 Agent 行为</strong>，而不是把所有能力都塞进模型本身。</p>
+
+<p><strong>核心思想</strong>：模型是引擎，Harness 是方向盘和安全带。</p>
+
+<p><strong>演进路线</strong>：</p>
+
+<pre><code class="language-mermaid">graph LR
+    A["V1: 纯 Prompt"] --&gt; B["V2: System Prompt + Tools"]
+    B --&gt; C["V3: Hooks + Skills + Rules"]
+    C --&gt; D["V4: 自适应 Harness"]
+</code></pre>
+
+<p><strong>阶段 1（纯 Prompt 时代）</strong>：所有行为约束写在 System Prompt 里。问题：Prompt 越写越长，模型遵循率随长度下降。</p>
+
+<p><strong>阶段 2（结构化工具时代）</strong>：把能力拆成 Tools / Function Calling，Prompt 只负责决策。问题：工具多了模型选错。</p>
+
+<p><strong>阶段 3（Harness 工程化）</strong>：引入三层机制：</p>
+<ul>
+  <li><strong>Rules</strong>（CLAUDE.md）：静态约束，每次对话都注入</li>
+  <li><strong>Skills</strong>：可复用的能力单元，按需触发</li>
+  <li><strong>Hooks</strong>：事件驱动的自动化行为（如 pre-commit 检查）</li>
+</ul>
+
+<p><strong>阶段 4（自适应）</strong>：Harness 本身可以被 Agent 修改——Agent 执行任务时发现某个 Skill 不够好，可以自我改进 Skill 定义。形成“使用→评估→改进”的闭环。</p>
+
+<p><strong>和传统 Agent 框架的区别</strong>：LangChain 的 Chain 是“预定义执行路径”，Harness 是“约束条件下的自由执行”。Harness 不规定 Agent 怎么做，只规定什么能做、什么不能做、做完怎么验证。</p>
+
+<p><strong>差距在哪</strong>：新手不了解这个概念。高手能讲清演进逻辑（为什么从 Prompt 演进到 Harness）和核心区别（约束 vs 规定路径），展示对 Agent 框架设计哲学的深度理解。面试官考的是你对前沿 Agent 工程架构的认知。</p>
+
+<hr />
+
+<h3 id="qskill-的渐进式披露progressive-disclosure怎么实现skill-之间的沙箱隔离和通信机制是什么">Q：Skill 的渐进式披露（Progressive Disclosure）怎么实现？Skill 之间的沙箱隔离和通信机制是什么？</h3>
+
+<blockquote>
+  <p>来源：蚂蚁AI应用开发二面</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“Skill 加载进去就行了，不需要什么披露策略。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>Skill 不是一次性全量加载的——这样会撑爆上下文且干扰模型判断。渐进式披露是<strong>按需、分层、递进地注入 Skill 内容</strong>：</p>
+
+<p><strong>渐进式披露的三层实现</strong>：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>层级</th>
+      <th>加载内容</th>
+      <th>触发时机</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>L0 索引层</td>
+      <td>只加载所有 Skill 的名称 + 一句话描述</td>
+      <td>会话启动时</td>
+    </tr>
+    <tr>
+      <td>L1 摘要层</td>
+      <td>匹配到的 Skill 加载执行步骤概要</td>
+      <td>用户意图命中触发条件</td>
+    </tr>
+    <tr>
+      <td>L2 完整层</td>
+      <td>加载 Skill 的全部内容（知识 + 约束 + 示例）</td>
+      <td>模型确认需要执行该 Skill</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>这样设计的好处：L0 让模型知道“有哪些能力可用”（几百 token），只有真正需要时才花费完整 Skill 的 token 预算。</p>
+
+<p><strong>沙箱隔离机制</strong>：</p>
+
+<p>多个 Skill 同时激活时，需要防止相互干扰：</p>
+
+<ol>
+  <li><strong>上下文命名空间</strong>：每个 Skill 的注入内容用明确的边界标记（<code class="language-plaintext highlighter-rouge">&lt;!-- skill:code-review start --&gt;...&lt;!-- end --&gt;</code>），模型能区分哪段指令来自哪个 Skill</li>
+  <li><strong>工具权限隔离</strong>：不同 Skill 声明自己可以使用的工具子集——代码审查 Skill 只能读文件，部署 Skill 才能执行 bash 命令</li>
+  <li><strong>输出作用域</strong>：每个 Skill 的输出约束互不覆盖——格式化 Skill 要求 JSON 输出不会干扰到同时激活的分析 Skill</li>
+</ol>
+
+<p><strong>Skill 间通信</strong>：</p>
+
+<p>Skill 之间不直接通信（避免耦合），而是通过<strong>共享状态层</strong>间接交互：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Skill A 执行完 → 将结果写入 shared_context（结构化 JSON）
+                → Skill B 启动时从 shared_context 读取前置结果
+</code></pre></div></div>
+
+<p>这和微服务通过消息队列通信是同一个模式——Skill 之间松耦合，通过标准化的数据结构传递结果，而不是直接引用彼此的内部状态。</p>
+
+<p><strong>差距在哪</strong>：新手认为 Skill 是”全量加载、互不相关”的。高手理解生产级 Skill 系统需要渐进披露（控制 token 成本）、沙箱隔离（防止冲突）、间接通信（支持组合）三重机制。面试官考的是你能不能把 Skill 从”单个文件”的认知提升到”多 Skill 协作系统”的架构层面。</p>
+
+<hr />
+
+<h3 id="q什么是一个好的提示词如何做好提示词的评估">Q：什么是一个好的提示词？如何做好提示词的评估？</h3>
+
+<blockquote>
+  <p>来源：科大讯飞AI一面</p>
+</blockquote>
+
+<p><strong>新手答</strong>：”好的提示词就是写得清楚，让模型能理解。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>好 Prompt 和差 Prompt 的区别不是”写得多 vs 写得少”，而是<strong>约束是否充分且无歧义</strong>。一个好的 Prompt 需要满足四个标准：</p>
+
+<p><strong>1. 角色和边界清晰</strong> — 模型知道自己是谁、不该做什么。”你是一个金融合规审核员，只判断是否合规，不提供建议” 比 “帮我看看这段话有没有问题” 好 10 倍。</p>
+
+<p><strong>2. 输出格式可解析</strong> — 下游代码能稳定解析输出。JSON Schema 约束、XML 标签包裹、固定分隔符都是手段。最怕的是”自由格式输出”——每次格式不同，正则也匹配不了。</p>
+
+<p><strong>3. 边界条件有兜底</strong> — 输入为空、输入不在预期范围内、模型不确定时的行为都有明确指令。”如果无法判断，输出 UNKNOWN 而非猜测”。</p>
+
+<p><strong>4. Few-shot 示例锚定风格</strong> — 1-2 个示例比 200 字的描述更有效。示例传递的是隐含规则（格式、粒度、语气），文字描述传递的是显式规则。</p>
+
+<p><strong>提示词评估的方法论</strong>：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>评估维度</th>
+      <th>指标</th>
+      <th>方法</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>格式稳定性</td>
+      <td>输出能被下游解析的比例</td>
+      <td>跑 100 条 query，统计 JSON parse 成功率</td>
+    </tr>
+    <tr>
+      <td>任务准确率</td>
+      <td>答案正确的比例</td>
+      <td>标注 golden set，自动对比</td>
+    </tr>
+    <tr>
+      <td>边界鲁棒性</td>
+      <td>异常输入下的表现</td>
+      <td>注入空输入/超长输入/对抗输入</td>
+    </tr>
+    <tr>
+      <td>一致性</td>
+      <td>相同输入多次输出的稳定度</td>
+      <td>同 query 跑 5 次，计算输出相似度</td>
+    </tr>
+    <tr>
+      <td>token 效率</td>
+      <td>同等效果下的 prompt 长度</td>
+      <td>A/B 对比精简版 vs 完整版</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>实际评估流程</strong>：</p>
+
+<ol>
+  <li>先构建 20-50 条有标注的评测集（覆盖正常/边界/对抗）</li>
+  <li>改 Prompt → 跑评测集 → 对比指标变化</li>
+  <li>用 LLM-as-Judge 做初筛（效率高），再人工抽检 bad case（准确高）</li>
+  <li>记录每次 Prompt 变更和对应指标，形成版本管理</li>
+</ol>
+
+<p><strong>差距在哪</strong>：新手觉得 Prompt 好不好靠”感觉”。高手有系统化的质量标准（四个维度）和量化评估方法（评测集 + 多维指标 + 版本管理）。面试官考的是你有没有把 Prompt 当工程问题来做——有标准、有测试、有迭代。</p>
+
+<hr />
+
+<h2 id="q用户的某个需求你会沉淀为-skill-还是长期记忆判断标准是什么">Q：用户的某个需求，你会沉淀为 Skill 还是长期记忆？判断标准是什么？</h2>
+
+<blockquote>
+  <p>来源：字节TikTok AI应用开发一面</p>
+</blockquote>
+
+<p><strong>新手答</strong>：”重复用的东西存起来，不重复的不用存。”</p>
+
+<p><strong>高手答</strong>：
+Skill 和长期记忆是两个维度完全不同的存储机制，选择标准要从”什么类型的知识”来判断：</p>
+
+<p><strong>核心判断维度</strong>：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>维度</th>
+      <th>沉淀为 Skill</th>
+      <th>沉淀为长期记忆</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>知识类型</strong></td>
+      <td>操作流程/推理模式/行为约束</td>
+      <td>用户偏好/事实信息/历史上下文</td>
+    </tr>
+    <tr>
+      <td><strong>使用者</strong></td>
+      <td>所有用户或某类任务通用</td>
+      <td>特定用户专属</td>
+    </tr>
+    <tr>
+      <td><strong>触发方式</strong></td>
+      <td>意图匹配主动加载</td>
+      <td>检索召回被动注入</td>
+    </tr>
+    <tr>
+      <td><strong>更新频率</strong></td>
+      <td>低（功能级更新）</td>
+      <td>高（每次对话可能更新）</td>
+    </tr>
+    <tr>
+      <td><strong>存储形态</strong></td>
+      <td>Markdown 文档/Prompt 模板</td>
+      <td>向量库/KV 存储</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>典型案例</strong>：</p>
+
+<ul>
+  <li>“用户每次写代码都喜欢加详细注释” → <strong>长期记忆</strong>（用户个性化偏好，每次写代码时召回注入）</li>
+  <li>“处理 SQL 注入问题的标准排查步骤” → <strong>Skill</strong>（通用操作流程，遇到安全类任务时加载）</li>
+  <li>“用户的项目使用 PostgreSQL + FastAPI 技术栈” → <strong>长期记忆</strong>（用户上下文，每次技术问题时提供）</li>
+  <li>“回答法律问题时必须加免责声明” → <strong>Skill</strong>（行为约束，法律意图触发时强制加载）</li>
+</ul>
+
+<p><strong>边界模糊时的判断原则</strong>：</p>
+<ol>
+  <li><strong>个性化程度</strong>：越个性化（跟这个用户强绑定）越应该是记忆，越通用越应该是 Skill</li>
+  <li><strong>是否需要推理</strong>：如果存储的内容本身包含”如何处理”的逻辑，是 Skill；如果只是”事实或偏好”，是记忆</li>
+  <li><strong>更新触发点</strong>：用户行为更新 → 记忆；工程师迭代 → Skill</li>
+</ol>
+
+<p><strong>差距在哪</strong>：面试官考的是你对 Skill 和记忆这两个抽象的本质理解——不是”都存起来”，而是理解它们在 Agent Runtime 里扮演的角色不同（行为约束 vs 上下文注入），从而做出正确的架构决策。</p>
+
+<hr />
+
+<h2 id="qdspy-是什么它在-agent-提示词优化和流程构建上有什么优势">Q：DSPy 是什么？它在 Agent 提示词优化和流程构建上有什么优势？</h2>
+
+<blockquote>
+  <p>来源：Agent开发八股合集（南京大学）</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“DSPy 是一个 Prompt 模板工具，帮你管理不同的提示词版本。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>DSPy 是斯坦福 NLP 实验室推出的框架，核心理念是<strong>把 Prompt Engineering 变成 Programming</strong>——用声明式模块替代手写 Prompt，用编译器自动优化 Prompt 内容。</p>
+
+<p><strong>DSPy 的核心设计：</strong></p>
+
+<ol>
+  <li><strong>Signature（签名）</strong>：用 Python 类型注解声明输入输出语义，如 <code class="language-plaintext highlighter-rouge">"question -&gt; answer"</code>，而不是手写 Prompt 文本</li>
+  <li><strong>Module（模块）</strong>：预定义的推理模式（如 ChainOfThought、ReAct、ProgramOfThought），组合就像搭积木</li>
+  <li><strong>Teleprompter/Optimizer（编译器）</strong>：给定少量示例和评估函数，自动搜索最优 Prompt（包括 few-shot 示例选择、指令措辞、格式约束）</li>
+  <li><strong>Metric（评估）</strong>：内置评估管线，优化过程数据驱动而非直觉驱动</li>
+</ol>
+
+<p><strong>对 Agent 开发的优势：</strong></p>
+
+<ul>
+  <li><strong>可复现</strong>：Prompt 不是字符串拼接的黑箱，而是版本化的模块组合，团队协作时不会“改坏别人的 Prompt”</li>
+  <li><strong>自动调优</strong>：当模型升级或数据分布变化时，重新编译即可得到新的最优 Prompt，无需手动逐句调</li>
+  <li><strong>组合性</strong>：多个模块可以串联成 Pipeline（如 Retrieve → Rerank → Generate），每个环节独立优化</li>
+  <li><strong>模型无关</strong>：换底层模型时只需重新编译，Signature 和 Module 结构不变</li>
+</ul>
+
+<p><strong>局限性（也要说）：</strong></p>
+
+<ul>
+  <li>对简单任务（单轮 QA）引入了不必要的抽象</li>
+  <li>编译器搜索空间大时优化耗时长，需要足够的评估数据</li>
+  <li>与 LangGraph/LangChain 等框架的集成不够原生，生态还在早期</li>
+  <li>调试时“为什么优化出这个 Prompt”的可解释性有限</li>
+</ul>
+
+<p><strong>适用场景</strong>：多步推理管线、需要频繁迭代 Prompt 的生产系统、团队协作场景。不适合：简单的一次性脚本或高度定制的 Prompt Hack。</p>
+
+<p><strong>差距在哪</strong>：面试官考的是你对“Prompt 工程工具化”趋势的认知。新手把 DSPy 等同于模板管理，高手能说出“声明式 + 自动编译”的范式区别，并能客观评价优势与局限，说明你对 Prompt 工程不只是“写 Prompt”这个层次。</p>
+
+<hr />
+
+<h3 id="q单看-prompt-层面有哪些办法能让模型回答更快更稳定">Q：单看 Prompt 层面，有哪些办法能让模型回答更快、更稳定？</h3>
+
+<blockquote>
+  <p>来源：视频面经汇总</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“写清楚需求，给几个 few-shot 示例。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>“更快”和“更稳定”是两个维度，Prompt 层面的优化手段：</p>
+
+<p><strong>提速手段（减少输出 token）：</strong></p>
+<ol>
+  <li><strong>限定输出格式</strong>：要求 JSON/结构化输出比自由文本短 3-5 倍。加 <code class="language-plaintext highlighter-rouge">"只输出结果，不要解释过程"</code> 可削减 50%+ token</li>
+  <li><strong>预填充（Prefill）</strong>：在 assistant 消息开头预设格式前缀（如 <code class="language-plaintext highlighter-rouge">{"action":</code>），模型只需补全剩余部分</li>
+  <li><strong>精简 System Prompt</strong>：删除冗余描述，把规则压缩到最少 token。10 条规则能合并成 3 条就合并</li>
+  <li><strong>分步拆解</strong>：一个复杂 Prompt 拆成多次短调用，每次上下文更小，单次响应更快</li>
+</ol>
+
+<p><strong>稳定手段（减少输出波动）：</strong></p>
+<ol>
+  <li><strong>Temperature 调低</strong>：创造性任务用 0.7，结构化输出用 0-0.1</li>
+  <li><strong>输出 Schema 约束</strong>：用 Structured Output / Function Calling 而非让模型自由输出 JSON</li>
+  <li><strong>负面指令</strong>：告诉模型“不要做什么”比“要做什么”更能约束行为边界</li>
+  <li><strong>Few-shot 锚定</strong>：给 2-3 个风格一致的示例，锚定输出模式。示例要覆盖边界情况</li>
+  <li><strong>输出前置思考</strong>：让模型先 <code class="language-plaintext highlighter-rouge">&lt;thinking&gt;</code> 再输出答案，思考过程稳定推理链路</li>
+</ol>
+
+<p><strong>差距在哪</strong>：新手把“快”和“稳定”混在一起回答。高手分开处理——“快”是减 token 的工程问题，“稳定”是减波动的约束问题。能给出 prefill、structured output、负面指令这类具体手段，说明你在生产中调过 Prompt 性能。</p>
+
+<hr />
+
+<h3 id="q你觉得一个-skill-写得好不好应该看哪些标准">Q：你觉得一个 Skill 写得好不好，应该看哪些标准？</h3>
+
+<blockquote>
+  <p>来源：视频面经汇总</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“看模型能不能正确触发它。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>评估一个 Skill 的质量，我会看五个维度：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>维度</th>
+      <th>好的 Skill</th>
+      <th>差的 Skill</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>触发精度</td>
+      <td>描述清晰，该触发时触发，不该触发时沉默</td>
+      <td>描述模糊，频繁误触发或漏触发</td>
+    </tr>
+    <tr>
+      <td>输出稳定性</td>
+      <td>同类输入产出一致，格式可预期</td>
+      <td>输出波动大，时对时错</td>
+    </tr>
+    <tr>
+      <td>边界明确</td>
+      <td>明确声明“能做什么、不能做什么”</td>
+      <td>什么都想覆盖，边界模糊</td>
+    </tr>
+    <tr>
+      <td>可组合性</td>
+      <td>输入输出 Schema 标准化，能被其他 Skill 调用</td>
+      <td>硬编码逻辑，无法嵌套</td>
+    </tr>
+    <tr>
+      <td>可维护性</td>
+      <td>指令简洁，改一个参数不影响整体</td>
+      <td>指令冗长纠缠，牵一发动全身</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>量化评估方法</strong>：</p>
+<ol>
+  <li><strong>触发准确率</strong>：构造正例（应触发）和负例（不应触发）测试集，统计 Precision/Recall</li>
+  <li><strong>输出一致性</strong>：同一输入跑 10 次，看输出结构的方差（JSON 字段是否稳定、关键信息是否丢失）</li>
+  <li><strong>端到端成功率</strong>：从用户意图到最终结果的全链路成功比例</li>
+  <li><strong>Token 效率</strong>：完成同一任务消耗的 token 数——越少说明指令越精炼</li>
+</ol>
+
+<p><strong>差距在哪</strong>：新手只关注“能不能用”，高手构建了一个多维评估体系。面试官考的是你对 Skill 作为工程产物的理解——它不是写完就完了，需要持续评估和迭代，就像代码需要单测一样。</p>
+
+<hr />
+
+<h2 id="qskill-分层体系怎么设计为什么这么分层">Q：Skill 分层体系怎么设计？为什么这么分层？</h2>
+
+<blockquote>
+  <p>来源：字节跳动 Agent 二面（Coding Agent）</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“按功能分类，比如代码生成一类、文档处理一类。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>Skill 分层不是简单的“功能分类”，而是一个<strong>按抽象层级递进的知识架构</strong>——不同层级的 Skill 服务于不同阶段的 Agent 决策。</p>
+
+<p><strong>三层 Skill 体系设计</strong>：</p>
+
+<pre><code class="language-mermaid">flowchart TB
+    subgraph L3["第三层：领域 Skill（Domain）"]
+        direction LR
+        D1["代码审查 Skill"]
+        D2["面试题分类 Skill"]
+        D3["安全扫描 Skill"]
+    end
+    
+    subgraph L2["第二层：能力 Skill（Capability）"]
+        direction LR
+        C1["文件操作 Skill"]
+        C2["搜索与检索 Skill"]
+        C3["测试验证 Skill"]
+    end
+    
+    subgraph L1["第一层：基础 Skill（Foundation）"]
+        direction LR
+        F1["输出格式约束"]
+        F2["错误处理模式"]
+        F3["上下文管理策略"]
+    end
+    
+    L3 --&gt; L2 --&gt; L1
+</code></pre>
+
+<p><strong>各层的职责和设计原则</strong>：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>层级</th>
+      <th>职责</th>
+      <th>触发方式</th>
+      <th>生命周期</th>
+      <th>示例</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>基础层</strong></td>
+      <td>通用行为约束，适用于所有任务</td>
+      <td>始终加载（Session 级）</td>
+      <td>整个会话有效</td>
+      <td>输出格式、错误处理、安全红线</td>
+    </tr>
+    <tr>
+      <td><strong>能力层</strong></td>
+      <td>通用能力模式，跨领域复用</td>
+      <td>按任务类型自动加载</td>
+      <td>任务执行期间有效</td>
+      <td>文件操作规范、搜索策略、测试方法</td>
+    </tr>
+    <tr>
+      <td><strong>领域层</strong></td>
+      <td>特定领域的专业知识和流程</td>
+      <td>意图匹配或显式触发</td>
+      <td>单次任务有效</td>
+      <td>代码审查标准、文档写作规范</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>为什么要分层？——解决三个工程问题</strong>：</p>
+
+<p><strong>1. 上下文预算管理</strong></p>
+
+<p>所有 Skill 同时加载会撑爆上下文窗口。分层后：</p>
+<ul>
+  <li>基础层常驻（约 500 token），成本固定</li>
+  <li>能力层按需加载（约 1000 token），只在需要时注入</li>
+  <li>领域层精确触发（约 2000 token），匹配到才加载</li>
+</ul>
+
+<p>总注入量从“全部 Skill × N”降低到“基础 + 1-2 个能力 + 1 个领域”。</p>
+
+<p><strong>2. 优先级与冲突解决</strong></p>
+
+<p>不同 Skill 的指令可能冲突。分层提供了天然的优先级：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>冲突示例：
+  基础层："输出必须是中文"
+  领域层（代码审查）："代码注释保持英文"
+  
+解决：领域层在特定上下文中覆盖基础层
+优先级：领域层 &gt; 能力层 &gt; 基础层（更具体的覆盖更通用的）
+</code></pre></div></div>
+
+<p><strong>3. 复用与组合</strong></p>
+
+<p>领域 Skill 可以复用能力层的通用模式：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>"代码审查 Skill"复用了：
+  - 能力层的"文件操作 Skill"（知道怎么读取代码文件）
+  - 能力层的"搜索与检索 Skill"（知道怎么定位相关代码）
+  - 基础层的"输出格式约束"（知道怎么结构化输出结果）
+</code></pre></div></div>
+
+<p>这种分层复用避免了在每个领域 Skill 中重复定义通用行为。</p>
+
+<p><strong>实际 Skill 分层设计示例（Coding Agent）</strong>：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>基础层：
+  ├── output-format.md    — 结构化输出格式（JSON/Markdown）
+  ├── safety-rules.md     — 安全红线（不删除、不推送、不暴露密钥）
+  └── error-handling.md   — 遇到错误时的标准处理流程
+
+能力层：
+  ├── file-operations.md  — 读/写/编辑文件的规范和最佳实践
+  ├── search-strategy.md  — 代码搜索的渐进式策略（grep→read→分析）
+  ├── test-verify.md      — 修改后验证的标准流程
+  └── git-workflow.md     — Git 操作规范
+
+领域层：
+  ├── code-review.md      — 代码审查的具体标准和输出格式
+  ├── refactor.md         — 重构的安全策略和验证步骤
+  ├── new-feature.md      — 新功能开发的架构评估和实现流程
+  └── bug-fix.md          — Bug 修复的排查方法和回归验证
+</code></pre></div></div>
+
+<p><strong>差距在哪</strong>：新手按“功能”做扁平分类——这会导致 Skill 之间大量重复定义、上下文预算失控、冲突无法解决。高手按“抽象层级”分层——基础层管约束、能力层管方法、领域层管专业知识——层级之间有明确的优先级和复用关系。面试官考的是你能不能把 Skill 从“一堆文件”设计成“一个有架构的知识系统”。</p>
+
+<hr />
+
+<h2 id="q动态-prompt-和静态-prompt-有什么区别各自在什么场景下用">Q：动态 Prompt 和静态 Prompt 有什么区别？各自在什么场景下用？</h2>
+
+<blockquote>
+  <p>来源：字节跳动 Agent 二面（Coding Agent）</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“静态 Prompt 写死的，动态 Prompt 可以变。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>“可以变”只是表象。两者的核心区别在于<strong>信息的确定时机和变化维度</strong>：</p>
+
+<p><strong>定义与区别</strong>：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>维度</th>
+      <th>静态 Prompt</th>
+      <th>动态 Prompt</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>确定时机</strong></td>
+      <td>开发时确定，部署后不变</td>
+      <td>运行时根据上下文实时组装</td>
+    </tr>
+    <tr>
+      <td><strong>变化频率</strong></td>
+      <td>版本级别（每次发版才改）</td>
+      <td>请求级别（每次请求都可能不同）</td>
+    </tr>
+    <tr>
+      <td><strong>内容来源</strong></td>
+      <td>工程师手写</td>
+      <td>代码逻辑 + 外部数据 + 用户状态</td>
+    </tr>
+    <tr>
+      <td><strong>token 开销</strong></td>
+      <td>固定，可优化</td>
+      <td>不确定，需要预算控制</td>
+    </tr>
+    <tr>
+      <td><strong>典型内容</strong></td>
+      <td>角色定义、行为规则、安全约束</td>
+      <td>用户画像、检索结果、工具列表、历史摘要</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>静态 Prompt 的典型场景</strong>：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>适合做静态 Prompt 的内容：
+├── 角色定义："你是一个资深代码审查工程师"
+├── 行为红线："绝不删除用户代码，不执行 rm -rf"
+├── 输出格式："回答使用 Markdown 格式，代码块标注语言"
+└── 通用规则："不确定时主动确认，不要猜测用户意图"
+
+特征：所有用户、所有请求都适用，不随上下文变化
+</code></pre></div></div>
+
+<p><strong>动态 Prompt 的典型场景</strong>：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>适合做动态 Prompt 的内容：
+├── 用户上下文："该用户的项目使用 React + TypeScript + Tailwind"
+├── 检索结果："以下是和用户问题相关的 3 段文档..."
+├── 工具可用性："当前可用工具：Read, Edit, Bash（限制：不可写 /etc）"
+├── 会话历史摘要："用户之前讨论了数据库优化方案，已确认用 PostgreSQL"
+└── 条件规则："如果用户是付费版，可以使用高级功能 X"
+
+特征：随用户、会话、任务状态动态变化
+</code></pre></div></div>
+
+<p><strong>工程实践中的组装模式</strong>：</p>
+
+<pre><code class="language-mermaid">flowchart LR
+    subgraph static["静态部分（版本化管理）"]
+        S1["System Identity"]
+        S2["Safety Rules"]
+        S3["Output Format"]
+    end
+    
+    subgraph dynamic["动态部分（运行时组装）"]
+        D1["用户 Profile"]
+        D2["RAG 检索结果"]
+        D3["活跃 Skill 内容"]
+        D4["会话摘要"]
+    end
+    
+    static --&gt; A["Prompt 组装器"]
+    dynamic --&gt; A
+    A --&gt; F["最终 Prompt\n（静态固定 + 动态填充）"]
+</code></pre>
+
+<p><strong>为什么不能全部动态化</strong>：</p>
+
+<ul>
+  <li>静态部分利用 <strong>Prompt Caching</strong>——相同的 System Prompt 前缀可以跨请求复用 KV Cache，大幅降低首 token 延迟和成本</li>
+  <li>静态部分是<strong>质量锚点</strong>——动态内容可能引入噪声（检索结果不相关、用户信息过时），静态规则确保行为底线不变</li>
+  <li>静态部分便于<strong>版本管理和 A/B 测试</strong>——改一个角色定义的影响是全局的，需要严格测试后才能上线</li>
+</ul>
+
+<p><strong>为什么不能全部静态化</strong>：</p>
+
+<ul>
+  <li>无法适应不同用户的个性化需求</li>
+  <li>无法注入实时知识（检索结果、工具状态）</li>
+  <li>上下文窗口浪费——把所有可能需要的信息全写进静态 Prompt 会极度臃肿</li>
+</ul>
+
+<p><strong>最佳实践</strong>：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>黄金比例：静态 20-30% + 动态 70-80%
+
+静态部分放最前面（利用 Prefix Caching）：
+  [Identity + Rules + Format]  ← 固定前缀，命中缓存
+
+动态部分按优先级排在后面：
+  [Skill 内容 &gt; RAG 结果 &gt; 用户画像 &gt; 历史摘要]
+  
+Token 预算分配：
+  总预算 8K，静态 2K 固定，动态 6K 按优先级分配
+</code></pre></div></div>
+
+<p><strong>差距在哪</strong>：新手只看到“变不变”的表面区别。高手理解背后的工程权衡——静态保证缓存复用和行为一致性，动态保证上下文相关性和个性化。两者的比例设计直接影响成本（Prompt Caching 命中率）和质量（上下文相关性）。面试官考的是你对 Prompt 系统工程化设计的理解深度。</p>
+
+<hr />
+
+<h2 id="q如果让你设计一个代码审查的-skill你会如何设计">Q：如果让你设计一个代码审查的 Skill，你会如何设计？</h2>
+
+<blockquote>
+  <p>来源：最有料 AI 实习生面经</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“写一个 Prompt 让模型去审查代码，列出问题就行。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>设计一个生产级的代码审查 Skill，需要从<strong>触发条件、执行流程、审查维度、输出格式和质量保障</strong>五个方面系统设计。</p>
+
+<p><strong>整体架构</strong>：</p>
+
+<pre><code class="language-mermaid">flowchart TD
+    A["触发：用户请求代码审查\n或 PR 提交事件"] --&gt; B["输入收集\n获取 diff / 文件变更列表"]
+    B --&gt; C["上下文构建\n读取相关文件、项目规则"]
+    C --&gt; D["分层审查\n按维度逐层扫描"]
+    D --&gt; E["问题汇总\n去重、分级、定位"]
+    E --&gt; F["结构化输出\n按严重程度排序"]
+    F --&gt; G["可选：自动修复\n对低风险问题直接修复"]
+</code></pre>
+
+<p><strong>1. 触发条件设计</strong>：</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">name</span><span class="pi">:</span> <span class="s">code-review</span>
+<span class="na">description</span><span class="pi">:</span> <span class="s">审查代码变更的正确性、安全性、可维护性</span>
+<span class="na">triggers</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="na">pattern</span><span class="pi">:</span> <span class="s2">"</span><span class="s">审查代码|review|帮我看看这段代码|代码有没有问题"</span>
+    <span class="na">type</span><span class="pi">:</span> <span class="s">regex</span>
+  <span class="pi">-</span> <span class="na">command</span><span class="pi">:</span> <span class="s2">"</span><span class="s">/review"</span>
+    <span class="na">type</span><span class="pi">:</span> <span class="s">explicit</span>
+  <span class="pi">-</span> <span class="na">event</span><span class="pi">:</span> <span class="s2">"</span><span class="s">git</span><span class="nv"> </span><span class="s">diff</span><span class="nv"> </span><span class="s">产出变更"</span>
+    <span class="na">type</span><span class="pi">:</span> <span class="s">contextual</span>
+</code></pre></div></div>
+
+<p><strong>2. 执行流程——四阶段</strong>：</p>
+
+<p><strong>阶段一：上下文收集</strong></p>
+
+<p>不能只看 diff，要理解变更的上下文：</p>
+<ul>
+  <li>读取变更文件的完整内容（不只是改动行）</li>
+  <li>读取项目的 CLAUDE.md 或 .cursorrules（了解项目规范）</li>
+  <li>读取相关的类型定义和接口文件（理解接口契约）</li>
+  <li>查看 git log 了解变更意图</li>
+</ul>
+
+<p><strong>阶段二：分层审查</strong></p>
+
+<p>按五个维度从高优先级到低优先级逐层扫描：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>优先级</th>
+      <th>审查维度</th>
+      <th>检查内容</th>
+      <th>严重程度</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>P0</td>
+      <td>正确性</td>
+      <td>逻辑错误、边界条件、空指针、类型不匹配</td>
+      <td>Critical</td>
+    </tr>
+    <tr>
+      <td>P1</td>
+      <td>安全性</td>
+      <td>SQL 注入、XSS、硬编码密钥、权限泄露</td>
+      <td>High</td>
+    </tr>
+    <tr>
+      <td>P2</td>
+      <td>一致性</td>
+      <td>和项目现有模式是否一致、命名规范</td>
+      <td>Medium</td>
+    </tr>
+    <tr>
+      <td>P3</td>
+      <td>可维护性</td>
+      <td>代码重复、过度复杂、缺少注释</td>
+      <td>Low</td>
+    </tr>
+    <tr>
+      <td>P4</td>
+      <td>性能</td>
+      <td>N+1 查询、不必要的循环、内存泄漏风险</td>
+      <td>Low</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>阶段三：问题输出</strong></p>
+
+<p>每个问题必须包含：具体位置（文件名 + 行号）、问题描述、严重程度、修复建议</p>
+
+<p><strong>阶段四：可选自动修复</strong></p>
+
+<p>对 P3/P4 级别的问题（命名不规范、简单的代码风格问题），可以直接生成修复 diff，让用户一键 apply。</p>
+
+<p><strong>3. 输出格式设计</strong>：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>## 代码审查结果
+
+### 🔴 Critical（必须修复）
+
+**[文件名:行号]** 问题标题
+- 问题：具体描述
+- 原因：为什么这是个问题
+- 修复建议：具体怎么改
+
+### 🟡 Medium（建议修复）
+...
+
+### 🟢 Low（可选优化）
+...
+
+### 总结
+- 审查了 X 个文件，Y 行变更
+- 发现 N 个问题（Critical: a, High: b, Medium: c, Low: d）
+- 整体评价：一句话总结代码质量
+</code></pre></div></div>
+
+<p><strong>4. 质量保障机制</strong>：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>机制</th>
+      <th>目的</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>False Positive 控制</strong></td>
+      <td>对不确定的问题标注“建议确认”而非“必须修复”</td>
+    </tr>
+    <tr>
+      <td><strong>项目规则对齐</strong></td>
+      <td>读取项目配置文件，避免提出违反项目约定的建议</td>
+    </tr>
+    <tr>
+      <td><strong>修复验证</strong></td>
+      <td>如果提供了自动修复，建议跑一次 lint/test 验证</td>
+    </tr>
+    <tr>
+      <td><strong>反馈闭环</strong></td>
+      <td>记录用户采纳/忽略的比例，用于优化审查标准</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>5. 和传统 Lint 工具的区别</strong>：</p>
+
+<p>Skill 式的代码审查不是替代 ESLint/Pylint，而是补充它们无法覆盖的维度：</p>
+<ul>
+  <li>Lint 能抓语法和风格问题，但抓不到<strong>业务逻辑错误</strong></li>
+  <li>Lint 不理解上下文——不知道这段代码的意图是什么，Skill 可以结合 commit message 和上下文理解</li>
+  <li>Lint 规则是固定的，Skill 可以根据项目特点动态调整审查标准</li>
+</ul>
+
+<p><strong>差距在哪</strong>：新手只想到“让模型看代码找问题”——这是最粗暴的方式，没有结构、没有分级、没有上下文。高手设计了完整的四阶段流程（收集→审查→输出→修复），按五个维度分级审查，并考虑了质量保障和反馈闭环。面试官考的是你能不能把一个“让 AI 做 X”的模糊需求转化为一个可工程化、可评测、可迭代的 Skill 设计。</p>
+
+<hr />
+
+<h2 id="q如果-agent-挂-100-个-skill如何提升召回率准确度f1-综合值">Q：如果 Agent 挂 100 个 Skill，如何提升召回率、准确度、F1 综合值？</h2>
+
+<blockquote>
+  <p>来源：关于skill的面试问题</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“优化 skill 的描述，让模型更容易选对。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>Skill 路由本质是一个<strong>信息检索+分类问题</strong>，100 个 Skill 的规模下，单靠描述优化远远不够。需要从召回、精排、评测、运行时四个层面系统优化。</p>
+
+<p><strong>1. 描述优化（提升 Recall）</strong></p>
+
+<p>让更多相关 Skill 被候选进入：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>优化手段</th>
+      <th>做法</th>
+      <th>效果</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>触发场景示例</td>
+      <td>每个 Skill 描述加 3-5 个 example queries</td>
+      <td>扩大语义覆盖面</td>
+    </tr>
+    <tr>
+      <td>Negative examples</td>
+      <td>添加“这个 Skill 不处理 XX”</td>
+      <td>减少误触发</td>
+    </tr>
+    <tr>
+      <td>同义词扩展</td>
+      <td>“天气” → “天气/气温/降雨/紫外线”</td>
+      <td>提升长尾 query 召回</td>
+    </tr>
+    <tr>
+      <td>分层描述</td>
+      <td>一句话摘要 + 详细能力说明</td>
+      <td>粗筛用摘要，精排用详情</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>2. 路由架构（提升 Precision）</strong></p>
+
+<p>让召回的候选中选出最准确的：</p>
+
+<pre><code class="language-mermaid">flowchart LR
+    A["用户 Query"] --&gt; B["Embedding 召回\nTop-10 候选"]
+    B --&gt; C["LLM 精选\nTop-1/Top-3"]
+    C --&gt; D["执行 Skill"]
+</code></pre>
+
+<ul>
+  <li><strong>两阶段路由</strong>：先 embedding 召回 Top-10 → 再 LLM 精选 Top-1（兼顾速度和准确度）</li>
+  <li><strong>分层分域</strong>：先确定领域（工作/生活/学习）→ 域内选 Skill（缩小候选空间）</li>
+  <li><strong>互斥组</strong>：定义互斥关系（如“翻译”和“润色”不能同时触发），避免模型在相似 Skill 间犹豫</li>
+</ul>
+
+<p><strong>3. 评测驱动（提升 F1）</strong></p>
+
+<p>没有评测就没有优化方向：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>评测集构建：
+  - 100+ 真实 query → 标注正确 Skill
+  - 计算 per-skill precision/recall
+  - 找出"高混淆对"（如"总结" vs "摘要"）
+  - 对高混淆对做差异化描述优化
+
+迭代流程：
+  跑评测 → 定位低分 Skill → 优化描述/架构 → 重新跑评测
+</code></pre></div></div>
+
+<p><strong>4. 运行时优化</strong></p>
+
+<ul>
+  <li><strong>上下文感知</strong>：根据当前对话历史动态调整 Skill 候选池——用户在讨论代码时，代码相关 Skill 权重提升</li>
+  <li><strong>用户反馈回流</strong>：用户纠正“不是这个 Skill”时记录，自动优化路由权重</li>
+  <li><strong>频率先验</strong>：高频使用的 Skill 在同等匹配度下优先（贝叶斯先验）</li>
+</ul>
+
+<p><strong>差距在哪</strong>：新手只想到“优化描述”——这是一维的。高手把 Skill 路由当作一个可量化的 ML 问题来解——有两阶段架构（召回+精排）、有评测集和指标（Precision/Recall/F1）、有迭代方法论（找混淆对→差异化优化）。面试官考的是你能不能把“选对 Skill”这个模糊问题工程化为一个有数据、有指标、有闭环的系统。</p>
+
+<hr />
+
+<h2 id="q如何给-agent-工具系统设计动态-skill而不让版本升级破坏历史任务">Q：如何给 Agent 工具系统设计动态 Skill，而不让版本升级破坏历史任务？</h2>
+
+<blockquote>
+  <p>来源：关于skill的面试问题</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“做好版本管理就行。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>核心矛盾：Skill 需要迭代升级（修 bug、加功能），但正在执行的任务依赖旧版本的输入输出格式。简单的“版本管理”不够——需要一套<strong>运行时兼容+灰度验证+自动回滚</strong>的完整方案。</p>
+
+<p><strong>版本兼容设计（四层）</strong>：</p>
+
+<pre><code class="language-mermaid">flowchart TD
+    A["Skill 版本管理"] --&gt; B["接口契约层\nSchema 语义化版本"]
+    A --&gt; C["路由层\n版本钉住策略"]
+    A --&gt; D["适配层\n新旧格式转换"]
+    A --&gt; E["灰度层\n渐进式发布"]
+</code></pre>
+
+<p><strong>第一层：接口契约层</strong></p>
+
+<p>Skill 的 input/output schema 使用语义化版本号：</p>
+<ul>
+  <li>v1.0 → v1.1：minor 升级，只加字段不删字段（向后兼容）</li>
+  <li>v1.x → v2.0：major 升级，允许破坏性变更（不兼容）</li>
+</ul>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>skill_name/
+  ├── v1/
+  │   ├── schema.yaml    # 输入输出格式定义
+  │   └── handler.py     # 执行逻辑
+  ├── v2/
+  │   ├── schema.yaml
+  │   └── handler.py
+  └── adapter_v1_to_v2.py  # 格式转换器
+</code></pre></div></div>
+
+<p><strong>第二层：路由层——版本钉住</strong></p>
+
+<ul>
+  <li>新 session 使用最新版本</li>
+  <li>进行中的 session 锁定启动时的版本（版本钉住）</li>
+  <li>路由表记录 <code class="language-plaintext highlighter-rouge">{session_id: skill_version}</code> 映射</li>
+</ul>
+
+<p><strong>第三层：适配层——新旧格式互转</strong></p>
+
+<p>新旧版本间加 adapter：旧版本的输出格式自动转换为新版本的输入格式。这样即使上游还在用 v1，下游已经升级到 v2，中间的 adapter 保证数据流不断。</p>
+
+<p><strong>第四层：灰度层——渐进式发布</strong></p>
+
+<p>新版本先对 10% 流量生效，监控以下指标：</p>
+<ul>
+  <li>执行成功率是否下降</li>
+  <li>输出格式解析错误率</li>
+  <li>用户反馈满意度</li>
+</ul>
+
+<p>验证无回退问题后全量发布。</p>
+
+<p><strong>防破坏的自动化检查</strong>：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>检查项</th>
+      <th>实现方式</th>
+      <th>触发时机</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>向后兼容性测试</td>
+      <td>用旧版本的 test fixtures 调新版本，断言不报错</td>
+      <td>CI 中每次 Skill 变更</td>
+    </tr>
+    <tr>
+      <td>Schema diff 检查</td>
+      <td>自动检测是否有字段删除或类型变更</td>
+      <td>PR 提交时</td>
+    </tr>
+    <tr>
+      <td>回滚演练</td>
+      <td>定期切回旧版本验证回滚路径可用</td>
+      <td>定期自动化</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>回滚机制</strong>：发现新版本问题后，一键切回旧版本——路由表指向旧版本即可，无需代码回滚。</p>
+
+<p><strong>差距在哪</strong>：新手的“版本管理”停留在“给文件打个 tag”的层面。高手设计了接口契约（语义化版本）+ 路由钉住（进行中任务不受影响）+ 适配层（格式互转）+ 灰度发布（渐进验证）的四层方案。面试官考的是对“运行中系统不可停”这个约束的系统性解法——不是简单的“版本号”，而是一套保证连续性的工程机制。</p>
+
+<hr />
+
+<h2 id="qskill-和-agent-的关系为什么不用-skill-而用子-agent">Q：Skill 和 Agent 的关系，为什么不用 Skill 而用子 Agent？</h2>
+
+<blockquote>
+  <p>来源：AI应用开发进阶面</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“Skill 比较简单，Agent 比较复杂。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>“简单 vs 复杂”只是表象。本质区别在于<strong>执行时是否需要自主决策循环</strong>：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>维度</th>
+      <th>Skill</th>
+      <th>子 Agent</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>本质</td>
+      <td>确定性能力单元（输入→固定流程→输出）</td>
+      <td>自主决策单元（有推理循环、可多步执行）</td>
+    </tr>
+    <tr>
+      <td>决策权</td>
+      <td>无自主决策，按预定义步骤执行</td>
+      <td>有自己的推理循环，自主判断下一步</td>
+    </tr>
+    <tr>
+      <td>工具调用</td>
+      <td>可能调用工具，但调用逻辑是预定义的</td>
+      <td>自主决定何时调用什么工具</td>
+    </tr>
+    <tr>
+      <td>延迟</td>
+      <td>通常 &lt;1s（规则执行或单次 API 调用）</td>
+      <td>5-30s（需要多轮 LLM 推理）</td>
+    </tr>
+    <tr>
+      <td>成本</td>
+      <td>低（不调 LLM 或只调一次）</td>
+      <td>高（每次调用消耗数千 token）</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>选择标准</strong>：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>用 Skill</th>
+      <th>用子 Agent</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>流程固定、步骤可枚举</td>
+      <td>需要自主规划、步骤不确定</td>
+    </tr>
+    <tr>
+      <td>无需推理、纯执行</td>
+      <td>需要理解上下文做判断</td>
+    </tr>
+    <tr>
+      <td>延迟敏感（&lt;1s）</td>
+      <td>可接受较高延迟（5-30s）</td>
+    </tr>
+    <tr>
+      <td>成本敏感（不调LLM）</td>
+      <td>质量优先（需要LLM推理）</td>
+    </tr>
+    <tr>
+      <td>输入输出格式固定</td>
+      <td>需要灵活处理多种输入</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>具体举例</strong>：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>"查天气" → Skill
+  原因：API 调用，固定流程，无需推理
+
+"帮我规划明天的行程" → 子 Agent
+  原因：需要综合天气、日历、偏好做规划，步骤不确定
+
+"翻译这段话" → Skill
+  原因：单步执行，格式固定
+
+"帮我写一篇调研报告" → 子 Agent
+  原因：需要多轮搜索、阅读、总结，自主决定何时搜索够了
+</code></pre></div></div>
+
+<p><strong>工程考量——成本陷阱</strong>：</p>
+
+<p>子 Agent 每次调用消耗数千 token（规划 + 多次工具调用 + 总结），Skill 可能只需几十 ms 的规则执行。滥用子 Agent 是最常见的成本陷阱：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>反例：用子 Agent 做"格式化日期"
+  成本：~2000 token × ¥0.03/千token = ¥0.06/次
+  正确做法：用 Skill（一行代码规则），成本 ≈ 0
+
+正例：用子 Agent 做"分析用户反馈并生成改进方案"
+  原因：需要阅读多条反馈、分类问题、综合分析、生成方案
+  Skill 做不到：步骤数不确定，每步都需要推理
+</code></pre></div></div>
+
+<p><strong>混合架构</strong>：</p>
+
+<p>生产系统中通常是 Skill 和子 Agent 混合使用——主 Agent 编排全局流程，简单步骤调 Skill（快+便宜），复杂步骤调子 Agent（慢但质量高）。</p>
+
+<p><strong>差距在哪</strong>：新手只能说“简单 vs 复杂”——这不是可操作的判断标准。高手从决策权、延迟、成本三个维度给出了明确的选择标准，并用具体例子说明边界。面试官考的是对“能力粒度”的设计判断——什么时候该用轻量 Skill，什么时候值得付出子 Agent 的成本，这直接影响系统的成本和性能。</p>
+
+<hr />
+
+<h2 id="qskill-的-prompt-配置上线后出错如何快速止损和修复">Q：Skill 的 Prompt 配置上线后出错，如何快速止损和修复？</h2>
+
+<blockquote>
+  <p>来源：百度/秋招后端一面</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“马上修改 Prompt，再重新发布。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>Skill Prompt 必须像代码一样发布，而不是直接覆盖数据库文本。每个版本绑定 Prompt、工具 schema、模型参数、评测结果和变更人；线上通过版本指针切换，旧版本保持可回滚。</p>
+
+<p>止损顺序是：先关闭该 Skill 的自动路由或切回稳定版本，再限制高风险工具权限；随后用 trace 复现 badcase，判断是描述、指令、schema 还是模型版本导致。修复版先跑该 Skill 的专项集和全局路由回归集，再小流量灰度。监控任务成功率、误路由率、工具错误率和人工接管率，超过阈值自动回滚。</p>
+
+<p>紧急手改 Prompt 只能作为临时措施，且必须留下审计记录和到期时间，避免“临时补丁”永久存在。</p>
+
+<p><strong>差距在哪</strong>：新手只想到改文本，高手把 Prompt 纳入版本、评测、灰度、熔断和回滚体系。面试官考的是 Skill 配置的生产发布能力。</p>
+
+<hr />
+
+<h2 id="q为什么-coding-agent-的-skills-通常放在-system-上下文而不是用户-query-中">Q：为什么 Coding Agent 的 Skills 通常放在 System 上下文，而不是用户 Query 中？</h2>
+
+<blockquote>
+  <p>来源：文心一言/实习一面</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“System Prompt 优先级更高，所以模型更听话。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>Skill 是宿主提供的能力说明和执行约束，不属于用户临时意图。放在 System 层有四个原因：权限边界更清晰，用户不能伪造或覆盖；跨轮次稳定，不必每轮重复拼接；可由 Host 按需披露并统一版本化；更容易与工具 schema、Hooks 和安全规则组合。</p>
+
+<p>但不应把所有 Skill 全量塞进 System。正确做法是 System 只保留 Skill 索引和不可变规则，路由命中后再加载具体 Skill 内容；动态任务参数仍放用户或运行时上下文。这样既保持指令层级，也控制 token 和注意力污染。</p>
+
+<p><strong>差距在哪</strong>：新手只会说“优先级高”，高手能区分平台能力、用户意图和运行时数据，并解释渐进式披露与版本治理。面试官考的是上下文分层设计。</p>
+
+<hr />
+
+<h2 id="q团队里的-skill-数量持续膨胀如何治理重复能力路由冲突和上下文占用">Q：团队里的 Skill 数量持续膨胀，如何治理重复能力、路由冲突和上下文占用？</h2>
+
+<blockquote>
+  <p>来源：电商 Agent 三面、电商库存二面（2026-08-17 至 2026-08-23）</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“把 Skill 描述写清楚，太多就合并。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>先建立带 owner、版本、输入输出 schema、权限、SLO、依赖和生命周期状态的 Skill 注册表。新增 Skill 必须先检索已有能力并通过重复度、路由混淆和增量收益评测；相近能力优先合并公共内核，用参数或场景适配层区分，而不是复制 Prompt。</p>
+
+<p>运行时采用分层披露：先按租户、领域和任务类型召回少量候选，再精排并只注入当前步骤需要的描述。持续监控 Top-1 路由准确率、候选重叠率、无调用率、Token 占用和失败回退；低价值 Skill 先标记 deprecated、停止新路由、排空在途任务，再删除。每次变更都要版本化、灰度并可回滚。</p>
+
+<p><strong>差距在哪</strong>：新手只优化一段描述，高手把 Skill 当作需要准入、发现、评测、发布和退役的能力资产。面试官考的是团队规模扩大后能否避免能力目录失控。</p>
+
+<hr />
+
+<h2 id="q如何让-agent-自动沉淀-skill同时保证生成的-skill-准确无害且不会无限膨胀">Q：如何让 Agent 自动沉淀 Skill，同时保证生成的 Skill 准确、无害且不会无限膨胀？</h2>
+
+<blockquote>
+  <p>来源：电商库存二面（2026-08-17）</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“任务成功后让模型总结成 Skill，人工审核后保存。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>候选 Skill 只能从可验证的成功轨迹产生，并同时保存适用条件、输入输出 schema、依赖工具、权限、反例和来源。生成后先做重复能力检索，再在隔离环境运行正例、边界、对抗和权限测试；涉及写操作、外部网络或凭据的候选必须人工审批。没有稳定增量收益的候选只保留为经验记录，不进入自动路由目录。</p>
+
+<p>发布时绑定版本、owner、评测报告和回滚目标，小流量观察路由准确率、任务成功率、误触发和副作用。后续按使用率、失败率和能力重叠度合并或退役。模型可以提出和改写候选，但不能自行扩大工具权限、覆盖稳定版本或删除审计来源。</p>
+
+<p><strong>差距在哪</strong>：新手只有“总结 + 审核”，高手补齐候选准入、去重、安全测试、灰度和退役闭环。面试官考的是自进化能否被证据和权限约束。</p>
+
+<hr />
+
+<h2 id="qopenspecspec-驱动开发与普通开发流程有什么区别如何治理-spec-过期">Q：OpenSpec/Spec 驱动开发与普通开发流程有什么区别？如何治理 Spec 过期？</h2>
+
+<blockquote>
+  <p>来源：浦金科一面、电商库存一面（2026-08-12 至 2026-08-15）</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“先写清楚需求和验收标准，再让 Agent 按 Spec 开发。”</p>
+
+<p><strong>高手答</strong>：Spec 是版本化执行契约，至少包含目标、范围、接口、约束、非目标、验收和决策记录，并与代码提交、测试和产物双向关联。变更先更新 Spec 或生成显式偏差记录；快速修复是否走完整流程由风险、影响面和可回滚性决定。CI 检查接口/测试与 Spec 的映射，运行数据和业务变更触发过期提醒；废弃 Spec 保留历史但停止路由，不能让 Agent 自动用旧规则覆盖新事实。</p>
+
+<p><strong>差距在哪</strong>：新手把 Spec 当 Prompt，高手把它当可演进、可审计的工程契约。</p>
+
+<hr />
+
+<h2 id="q为什么一个很短的-skill-也可能有效如何验证效果来自哪里">Q：为什么一个很短的 Skill 也可能有效？如何验证效果来自哪里？</h2>
+
+<blockquote>
+  <p>来源：OPPO AI 全栈一面（2026-08-23）</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“模型本身能力强，Skill 只需要提醒关键步骤。”</p>
+
+<p><strong>高手答</strong>：短 Skill 可能贡献触发语义、关键顺序、禁止项或对外部工具/上下文的索引，而不是承载全部知识。用消融实验分别移除描述、步骤、示例、工具和项目上下文，固定模型与任务集，比较路由、成功率、Token 和副作用；再用无关任务检查误触发。若效果来自仓库已有上下文，应明确依赖，不能把收益都归功于短文本。</p>
+
+<p><strong>差距在哪</strong>：新手凭感觉解释，高手通过组件消融识别真实因果贡献。</p>
+
+<hr />
+
+<h2 id="q可演进能力为什么应封装为-skill而不是不断塞进-promptskill-的知识进化流水线如何治理">Q：可演进能力为什么应封装为 Skill，而不是不断塞进 Prompt？Skill 的知识进化流水线如何治理？</h2>
+
+<blockquote>
+  <p>来源：小红书 Agent 开发实习一面（2026-08-24）</p>
+</blockquote>
+
+<p><strong>新手答</strong>：“Prompt 太长会浪费 Token，Skill 可以按需加载，也方便复用和更新。”</p>
+
+<p><strong>高手答</strong>：</p>
+
+<p>全局 Prompt 适合身份、不可变规则和通用行为；持续演进的领域能力具有触发条件、知识、步骤、工具、权限和验收标准，需要独立 owner、版本与评测。把它们都塞进 Prompt 会造成注意力竞争、规则冲突、缓存失效和全局回归，且无法回答“哪次变更导致哪个能力退化”。Skill 将变化隔离成可按需披露、独立测试和回滚的能力包，但低频事实仍应放 RAG，确定性操作仍应由代码/工具实现，不能把所有内容都包装成 Skill。</p>
+
+<p>知识进化应是一条受控流水线：从成功与失败 trace、用户纠正和权威文档产生候选变更；先绑定来源、适用范围与时效，再做去重、冲突和权限分析；由模型起草 Skill diff，但通过正例、反例、边界、安全和全局路由回归后才进入评审。发布时绑定版本、依赖、评测报告和回滚目标，经过 shadow 与小流量灰度；线上监控路由准确率、任务成功率、Token、工具副作用和人工接管率。</p>
+
+<p>反馈不能直接改生产文本。它先进入证据队列，达到样本量与置信门槛后形成提案；低使用、重叠或过期 Skill 走 deprecated、停止新路由、排空任务再退役。每个答案与动作保留 Skill 版本和证据谱系，才能审计知识从哪里来、何时生效、是否应撤回。</p>
+
+<p><strong>差距在哪</strong>：新手只看到 Token 节省，高手会按知识、行为和工具边界选择载体，并把 Skill 进化设计成有证据、评测、灰度、回滚和退役的发布系统。</p>
+
+<hr />
+
+<h2 id="这类题的答题模式">这类题的答题模式</h2>
+
+<p>Prompt 工程与框架原理题的核心是<strong>系统化思维</strong>：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>1. Prompt 不是字符串——是分层的、动态的、需要版本管理的工程产物
+2. Skill 不是模板——是触发条件 + Prompt + 工具 + 约束的完整执行上下文
+3. 讲实现时要讲清楚"怎么触发、怎么组装、怎么隔离"
+4. 和传统软件设计的类比：Skill ≈ 插件系统，Prompt 模板 ≈ 配置化策略
+</code></pre></div></div>
+
+<p>下一篇建议继续看：</p>
+
+<ul>
+  <li><a href="../09-rag-retrieval/index.html">RAG 与检索系统：从 chunk 设计到多路召回</a></li>
+</ul>
+
+                <!-- Article Feedback -->
+                <div class="article-feedback" id="article-feedback">
+                    <span class="feedback-label">这篇文章有帮助吗？</span>
+                    <div class="feedback-btns">
+                        <button class="reaction-btn" id="btn-like" type="button" aria-label="点赞">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
+                            <span class="reaction-count" id="like-count">0</span>
+                        </button>
+                        <button class="reaction-btn" id="btn-dislike" type="button" aria-label="点踩">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3H10z"/><path d="M17 2h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3"/></svg>
+                            <span class="reaction-count" id="dislike-count">0</span>
+                        </button>
+                    </div>
+                    <span class="feedback-sep">|</span>
+                    <a class="feedback-comment" id="feedback-comment" href="#" target="_blank" rel="noopener">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                        GitHub 留言
+                    </a>
+                </div>
+                <!-- Prev / Next pager -->
+                <nav class="doc-pager" aria-label="章节导航">
+                    <a class="pager-btn pager-prev" id="pager-prev" href="#">
+                        <span class="pager-label">← 上一篇</span>
+                        <span class="pager-title" id="pager-prev-title"></span>
+                    </a>
+                    <a class="pager-btn pager-next" id="pager-next" href="#">
+                        <span class="pager-label">下一篇 →</span>
+                        <span class="pager-title" id="pager-next-title"></span>
+                    </a>
+                </nav>
+            </article>
+
+            <!-- Right: TOC -->
+            <nav class="doc-toc" id="doc-toc">
+                <p class="toc-label">本页目录</p>
+                <div id="toc-list"></div>
+            </nav>
+        </main>
+
+        <footer class="doc-footer">
+            <div class="doc-footer-inner">
+                <span class="footer-desc">Zero2Agent · static docs architecture · Built for learning Agent development from zero to project.</span>
+                <span id="busuanzi_container_site_uv" class="footer-counter" style="display:none">
+                    👤 你是第 <span id="busuanzi_value_site_uv" class="cv"></span> 位读者
+                </span>
+                <span id="busuanzi_container_page_pv" class="footer-counter" style="display:none">
+                    📖 本文 <span id="busuanzi_value_page_pv" class="cv"></span> 次阅读
+                </span>
+                <div class="footer-links">
+                    <a href="https://onefly.top" target="_blank" rel="noopener" class="footer-link">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
+                            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                        </svg>
+                        Onefly
+                    </a>
+                    <a href="https://github.com/ranxi2001/zero2Agent" target="_blank" rel="noopener" class="footer-link">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.522 2 12 2z"/>
+                        </svg>
+                        GitHub
+                    </a>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Back to top button -->
+    <button class="back-to-top" id="back-to-top" aria-label="回到顶部" title="回到顶部">🚀</button>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script>
+        // Prevent hljs from processing mermaid code blocks
+        document.querySelectorAll('.language-mermaid code, code.language-mermaid').forEach(function(el) {
+            el.classList.add('nohighlight');
+        });
+        hljs.highlightAll();
+    </script>
+    <!-- Transform kramdown mermaid code blocks and render -->
+    <script>
+        (function () {
+            function srcToInnerHTML(src) {
+                return src
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/&lt;br\s*\/?&gt;/gi, '<br/>');
+            }
+
+            document.querySelectorAll('.language-mermaid').forEach(function(wrapper) {
+                var code = wrapper.querySelector('code') || wrapper;
+                var src = code.textContent;
+                var div = document.createElement('div');
+                div.className = 'mermaid';
+                div.dataset.mermaidSrc = src;
+                div.innerHTML = srcToInnerHTML(src);
+                wrapper.parentNode.replaceChild(div, wrapper);
+            });
+
+            var els = document.querySelectorAll('.mermaid');
+            if (els.length > 0) mermaid.init(undefined, els);
+        })();
+    </script>
+    <!-- Flat nav list for prev/next pager -->
+    <script>
+        window.Z2A_BASE = "";
+        window.Z2A_REACTIONS_API = "https://zero2pm-reactions.ranxi169.workers.dev";
+        window.Z2A_NAV = [{"path":"learn-agent-basic/01-what-is-an-agent","title":"什么是 Agent"},{"path":"learn-agent-basic/02-workflow-vs-agent","title":"Workflow 和 Agent 的区别"},{"path":"learn-agent-basic/03-core-components","title":"一个 Agent 系统的核心组成"},{"path":"learn-agent-basic/04-why-agent-demos-break","title":"为什么很多 Agent Demo 一落地就不稳定"},{"path":"learn-agent-basic/05-tool-calling-basics","title":"大模型 API 输入输出与 Tool Calling"},{"path":"learn-agent-basic/06-memory-patterns","title":"Context、State 与 Memory"},{"path":"learn-agent-basic/07-planning-reflection-rag","title":"Planning、Reflection、RAG 分别解决什么问题"},{"path":"learn-agent-basic/08-single-vs-multi-agent","title":"单 Agent 和多 Agent 的边界"},{"path":"learn-agent-basic/09-agent-infra","title":"Agent Infra：从 Harness 到生产环境"},{"path":"learn-agent-basic/10-loop-engineering","title":"Loop Engineering：让 Agent 自主迭代直到正确"},{"path":"learn-agent-basic/11-agent-evaluation","title":"Agent 评估：怎么知道你的 Agent 好不好"},{"path":"learn-agent-basic/12-coding-agent-patterns","title":"Coding Agent：最成功的 Agent 落地形态"},{"path":"learn-agent-basic/13-context-engineering","title":"Context Engineering：系统化设计模型输入"},{"path":"learn-agent-basic/14-multimodal-realtime","title":"多模态与实时交互 Agent"},{"path":"learn-agent-basic/15-agent-self-evolution","title":"Agent 自进化：不改权重也能持续变强"},{"path":"learn-agent-basic/16-advanced-rag-memory","title":"高级 RAG 与记忆架构"},{"path":"learn-agent-basic/17-async-event-driven","title":"异步 Agent 与事件驱动架构"},{"path":"learn-langgraph/01-what-is-langgraph","title":"LangGraph 是什么，为什么不用链式调用"},{"path":"learn-langgraph/02-state-node-graph","title":"State、Node、Graph 三件套"},{"path":"learn-langgraph/03-sequential-graph","title":"顺序图：第一个可运行的 Workflow"},{"path":"learn-langgraph/04-conditional-edges","title":"条件分支：add_conditional_edges"},{"path":"learn-langgraph/05-parallel-workflows","title":"并行执行：Fan-out / Fan-in"},{"path":"learn-langgraph/06-prompt-chaining","title":"Prompt Chaining：分步生成"},{"path":"learn-langgraph/07-llm-integration","title":"接入 LLM：OpenAI 与 HuggingFace"},{"path":"learn-sdk-frameworks/01-openai-agents-sdk","title":"OpenAI Agents SDK：Agent、Tool、Handoff"},{"path":"learn-sdk-frameworks/02-google-gemini-sdk","title":"Google genai SDK：Gemini + Vertex AI 多模型"},{"path":"learn-sdk-frameworks/03-claude-anthropic-sdk","title":"Claude Anthropic SDK：Messages API 与 Tool Use"},{"path":"learn-sdk-frameworks/04-sdk-comparison","title":"三大 SDK 横向对比：怎么选"},{"path":"learn-agent-survey/01-agentscope","title":"AgentScope：阿里的多 Agent 框架"},{"path":"learn-agent-survey/02-mastra","title":"Mastra：TypeScript 原生 Agent 框架"},{"path":"learn-agent-survey/03-semantic-kernel","title":"Semantic Kernel：微软的企业级 AI SDK"},{"path":"learn-agent-survey/04-eino","title":"Eino：字节跳动的 Go 语言 Agent 框架"},{"path":"learn-agent-survey/05-gitagent","title":"GitAgent：代码仓库智能操作"},{"path":"learn-agent-survey/06-harness","title":"手搓 Agent：从原理到实现"},{"path":"learn-agent-survey/07-agentuniverse","title":"AgentUniverse：华为的企业级 Agent 平台"},{"path":"learn-agent-survey/08-deerflow","title":"DeerFlow：字节跳动的 Deep Research 框架"},{"path":"learn-agent-survey/09-langchain","title":"LangChain：最流行的 LLM 框架"},{"path":"learn-agent-survey/10-google-adk","title":"Google ADK：官方 Agent 开发套件"},{"path":"learn-agent-survey/11-skills-claudecode","title":"Skills + Claude Code：模块化技能系统"},{"path":"learn-agent-survey/12-vercel-ai-sdk","title":"Vercel AI SDK：全栈 AI 应用框架"},{"path":"learn-agent-survey/13-autogen","title":"AutoGen：微软的多 Agent 对话框架"},{"path":"learn-openclaw/01-core-idea","title":"为什么要自己写 Agent"},{"path":"learn-openclaw/02-node-to-agent","title":"Agent Loop：EventStream 核心循环"},{"path":"learn-openclaw/03-rag","title":"RAG：检索增强工程实现"},{"path":"learn-openclaw/04-tools","title":"工具系统：MCP 与并行执行"},{"path":"learn-openclaw/05-memory","title":"Context Engine：记忆架构"},{"path":"learn-openclaw/06-multi-agent","title":"Multi-Agent：隔离与路由"},{"path":"learn-openclaw/07-pi-mono","title":"读懂 pi-mono 源码"},{"path":"learn-openclaw/08-build-openclaw","title":"构建你的 OpenClaw"},{"path":"learn-openclaw/09-interview","title":"面试与实习准备"},{"path":"learn-claude-code/01-agent-loop","title":"Agent Loop：一个循环就是一个 Agent"},{"path":"learn-claude-code/02-tool-use","title":"Tool Use：扩展模型能触达的边界"},{"path":"learn-claude-code/03-todo-write","title":"TodoWrite：让 Agent 不再迷路"},{"path":"learn-claude-code/04-subagent","title":"Subagent：上下文隔离的正确姿势"},{"path":"learn-claude-code/05-skill-loading","title":"Skill Loading：按需加载领域知识"},{"path":"learn-claude-code/06-context-compact","title":"Context Compact：三层压缩换无限会话"},{"path":"learn-claude-code/07-task-system","title":"Task System：持久化任务图"},{"path":"learn-claude-code/08-background-tasks","title":"Background Tasks：非阻塞工具执行"},{"path":"learn-claude-code/09-agent-teams","title":"Agent Teams：多 Agent 协作"},{"path":"learn-claude-code/10-team-protocols","title":"Team Protocols：结构化通信协议"},{"path":"learn-claude-code/11-autonomous-agents","title":"Autonomous Agents：自组织团队"},{"path":"learn-claude-code/12-worktree-isolation","title":"Worktree 隔离：多 Agent 并行不踩踏"},{"path":"learn-deepseek-harness/01-what-is-harness","title":"DeepSeek Harness：一切皆插件的 Agent 运行时"},{"path":"learn-deepseek-harness/02-cordis-plugin-kernel","title":"声明式与命令式：Cordis 的五个核心概念"},{"path":"learn-deepseek-harness/03-profile-bundle-patch","title":"运行中的 DSH：插件树、组合层与能力接缝"},{"path":"learn-deepseek-harness/04-llm-seam","title":"LLM 接缝：把模型差异关在适配器里"},{"path":"learn-deepseek-harness/05-agent-loop","title":"Agent Loop：控制平面如何推进任务"},{"path":"learn-deepseek-harness/06-tool-pipeline","title":"Tool Pipeline：能力为什么不能直接等于权限"},{"path":"learn-deepseek-harness/07-session-log","title":"Session Log：为什么日志就是事实源"},{"path":"learn-deepseek-harness/08-inbox-control","title":"Inbox 控制：为什么用户插话必须有自己的语义"},{"path":"learn-deepseek-harness/09-code-mode","title":"Code Mode：上下文压缩不等于安全隔离"},{"path":"learn-deepseek-harness/10-context-compaction-cost","title":"Context Compaction：把上下文当作工作集管理"},{"path":"learn-deepseek-harness/11-security-boundary","title":"安全边界：把信任放到模型之外"},{"path":"learn-deepseek-harness/12-subagent-orchestration","title":"Subagent 编排：扩展能力而不是复制 Loop"},{"path":"learn-deepseek-harness/13-runtime-surfaces","title":"Runtime Surfaces：一套运行时如何服务多个宿主"},{"path":"learn-agent-training/01-agent-sft","title":"Agent SFT 关键细节：从轨迹数据到 Loss Mask"},{"path":"learn-agent-training/02-agent-rl","title":"Agent RL 实战：用强化学习提升推理与决策质量"},{"path":"learn-agent-training/03-grpo-vs-ppo","title":"GRPO vs PPO：Agent 强化学习算法深度对比与选型"},{"path":"learn-agent-training/04-data-mix","title":"训练数据配比实战：Agent 不只吃轨迹数据"},{"path":"learn-agent-training/05-agent-eval","title":"Agent 评测：怎么衡量训练效果"},{"path":"learn-agent-training/06-train-to-deploy","title":"从 SFT 到部署：Agent 模型上线全流程"},{"path":"learn-agent-training/07-training-environment-engineering","title":"Agent 训练环境工程：从仿真沙箱到数据回流闭环"},{"path":"learn-agent-practice/01-vibe-coding-homepage","title":"从 0 开始 Vibe Coding：用 Codex 发布个人主页"},{"path":"learn-agent-practice/02-ai-coding-interview","title":"AI Coding 面试：解题流程与交付策略"},{"path":"learn-agent-practice/03-daily-dev-workflow","title":"日常开发中的 Agent 工作流"},{"path":"learn-agent-practice/04-auto-harness","title":"Auto Harness 迭代实战"},{"path":"learn-agent-practice/05-eval-driven-practice","title":"Eval-Driven Agent Practice：用评估驱动 Agent 工作流迭代"},{"path":"learn-pi/01-what-is-pi","title":"Pi 是什么：定位、架构与 Agent Loop"},{"path":"learn-pi/02-pi-ai-provider","title":"pi-ai：统一多 Provider 的适配层设计"},{"path":"learn-pi/03-extension-system","title":"扩展体系：Skill、Extension 与 Package"},{"path":"learn-pi/04-mcp-adapter","title":"Pi 为什么不内置 MCP：Adapter 与 Token 取舍"},{"path":"learn-pi/05-security-model","title":"安全模型：Project Trust、权限门禁与系统隔离"},{"path":"learn-pi/06-ecosystem","title":"生态使用：发现、审计与退出策略"},{"path":"learn-pi/07-comparison","title":"Pi vs Claude Code vs DSH：按约束选择 Harness"},{"path":"learn-pi/08-session-runtime","title":"Session Runtime：树形历史、恢复与 Compaction"},{"path":"learn-codex/01-what-is-codex","title":"Codex CLI 是什么：定位、架构与 Agent Loop"},{"path":"learn-codex/02-config-permission","title":"配置与权限系统：TOML 层级与三种审批策略"},{"path":"learn-codex/03-sandbox-security","title":"沙箱与安全模型：平台原生隔离的工程边界"},{"path":"learn-codex/04-mcp-integration","title":"MCP 深度集成：工具协议与审批边界"},{"path":"learn-codex/05-codex-sdk","title":"Codex SDK：Thread-based 编程式 Agent 接口"},{"path":"learn-codex/06-developer-experience","title":"开发者体验与生态评估"},{"path":"learn-codex/07-codex-vs-claude-code","title":"Codex vs Claude Code vs DSH"},{"path":"learn-agent-interview/01-architecture-design","title":"架构选型"},{"path":"learn-agent-interview/02-tool-management","title":"工具管理"},{"path":"learn-agent-interview/03-fault-tolerance","title":"容错与鲁棒性"},{"path":"learn-agent-interview/04-memory-context","title":"记忆与上下文"},{"path":"learn-agent-interview/05-eval-and-vision","title":"评估与全局观"},{"path":"learn-agent-interview/06-multi-agent-collab","title":"多智能体协作"},{"path":"learn-agent-interview/07-engineering-pitfalls","title":"工程化踩坑"},{"path":"learn-agent-interview/08-prompt-engineering","title":"Prompt 工程与框架原理"},{"path":"learn-agent-interview/09-rag-retrieval","title":"RAG 与检索系统"},{"path":"learn-agent-interview/10-training-and-data","title":"训练、数据与模型优化"},{"path":"learn-agent-interview/11-ai-code-testing","title":"AI 代码分析与测试"},{"path":"learn-agent-interview/12-business-ai-engineering","title":"业务 AI 工程分析"},{"path":"learn-agent-interview/13-project-deep-dive","title":"简历项目拷打"},{"path":"learn-agent-interview/14-company-preferences","title":"各公司面试偏好"},{"path":"learn-agent-interview/15-agent-concepts","title":"概念考察"},{"path":"final-project/01-prd","title":"PRD：产品需求文档"},{"path":"final-project/02-architecture","title":"系统架构设计"},{"path":"final-project/03-query-engine","title":"Query Engine 实现"},{"path":"final-project/04-tools-skills","title":"Tools & Skills 实现"},{"path":"final-project/05-knowledge-base","title":"知识库构建"},{"path":"final-project/06-context-memory","title":"Context & Memory"},{"path":"final-project/07-permission-session","title":"Permission & Session"},{"path":"final-project/08-hook-command","title":"Hook & Command"},{"path":"final-project/09-sub-agent","title":"Sub-agent 编排"},{"path":"final-project/10-stt-speech","title":"STT 集成与语音分析"},{"path":"final-project/11-deploy-demo","title":"部署与演示"},{"path":"final-project/12-web-ui","title":"Web UI 交互设计"},];
+    </script>
+    <script src="/assets/js/app.js?v=11"></script>
+    <script src="/assets/js/github-stars.js?v=1"></script>
+</body>
+
+</html>
